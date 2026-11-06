@@ -196,7 +196,8 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
             continue;
 
         vector<string> tokens = parseCSVLine(line);
-        s if (tokens.size() < 30) continue;
+        if (tokens.size() < 30)
+            continue;
 
         SpeciesData *species = new SpeciesData;
         species->pokedexNumber = stoi(tokens[0]);
