@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 #include <fstream>
+=======
+#include "include/CSVParser.h"
+#include "include/PCSystem.h"
+>>>>>>> e499714 (Boxes system added)
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -325,23 +330,29 @@ const SpeciesData *getSpeciesByPokedexNumber(const vector<SpeciesData *> &databa
 
 int main()
 {
+<<<<<<< HEAD
     // Variables
     int choice = -1;
+=======
+>>>>>>> e499714 (Boxes system added)
     string csvFilename = "pokemon_complete.csv";
-
     if (!checkCSVFile(csvFilename))
-    {
         return 1;
-    }
 
     vector<SpeciesData *> pokedex = loadSpeciesDatabase(csvFilename);
-
     if (pokedex.empty())
-    {
-        cout << "[ERROR] Database failed to load species." << endl;
         return 1;
+
+    PCSystem pc;
+
+    // Seed test data in Box 1
+    const SpeciesData *bulbasaur = getSpeciesByPokedexNumber(pokedex, 1);
+    if (bulbasaur)
+    {
+        pc.getCurrentList().append(bulbasaur, "Neil", "Male", 5, "Overgrow", "Overgrow", false, "2026-11-06");
     }
 
+<<<<<<< HEAD
     DoublyLinkedList pcBox;
 
     cout << "Bill's PC initialized!" << endl;
@@ -357,32 +368,61 @@ int main()
 
         // handle valid integer input
         if (cin >> choice)
+=======
+    int mainChoice = -1;
+    while (mainChoice != 0)
+    {
+        cout << "\n--- BILL'S PC (" << pc.getCurrentBoxName() << ") ---" << endl;
+        cout << "1. Display Current Box" << endl;
+        cout << "2. Switch Active Box" << endl;
+        cout << "3. Rename Current Box" << endl;
+        cout << "4. View All Boxes Overview" << endl;
+        cout << "0. Exit" << endl;
+        cout << "Enter command: ";
+
+        if (cin >> mainChoice)
+>>>>>>> e499714 (Boxes system added)
         {
-            if (choice == 0)
+            if (mainChoice == 1)
             {
-                cout << "Shutting down PC. Goodbye!" << endl;
+                pc.displayCurrentBox();
             }
-            else if (choice == 1)
+            else if (mainChoice == 2)
             {
+<<<<<<< HEAD
                 cout << "[placeholder]" << endl;
+=======
+                int boxNum;
+                cout << "Enter Box Number (1-30): ";
+                cin >> boxNum;
+                pc.switchBox(boxNum);
+>>>>>>> e499714 (Boxes system added)
             }
-            else
+            else if (mainChoice == 3)
             {
+<<<<<<< HEAD
                 cout << "Invalid command. Please try again." << endl;
+=======
+                string newName;
+                cout << "Enter new box name: ";
+                cin.ignore();
+                getline(cin, newName);
+                pc.renameCurrentBox(newName);
+            }
+            else if (mainChoice == 4)
+            {
+                pc.listAllBoxes();
+>>>>>>> e499714 (Boxes system added)
             }
         }
         else
         {
             cin.clear();
             cin.ignore(10000, '\n');
-            cout << "Invalid input. Please enter a number." << endl;
         }
     }
 
     for (auto *species : pokedex)
-    {
         delete species;
-    }
-
     return 0;
 }
