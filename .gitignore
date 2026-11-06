@@ -1,11 +1,2 @@
-# Compiled binaries
 pokemon_pc
-*.o
-*.exe
-*.out
-
-# Editor & OS temporary files
 .vscode/
-.clangd/
-*.swp
-.DS_Store
