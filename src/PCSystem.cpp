@@ -63,3 +63,21 @@ void PCSystem::listAllBoxes() const
     }
     cout << "==============================================" << endl;
 }
+
+bool PCSystem::moveBetweenBoxes(int sourceBox, int targetBox, int instanceID)
+{
+    int srcIdx = sourceBox - 1;
+    int tgtIdx = targetBox - 1;
+
+    if (srcIdx < 0 || srcIdx >= MAX_BOXES || tgtIdx < 0 || tgtIdx >= MAX_BOXES)
+        return false;
+    if (boxes[tgtIdx].list.getCount() >= BOX_CAPACITY)
+        return false;
+
+    PokemonNode *moved = boxes[srcIdx].list.removeByID(instanceID);
+    if (moved == nullptr)
+        return false;
+
+    boxes[tgtIdx].list.insertNode(moved);
+    return true;
+}

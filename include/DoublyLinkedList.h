@@ -25,6 +25,11 @@ public:
     int getCount() const { return count; }
     bool isEmpty() const { return head == nullptr; }
     PokemonNode *getHead() const { return head; }
+
+    PokemonNode *removeByID(int instanceID);
+    void insertNode(PokemonNode *node);
+
+    bool swapNodes(int index1, int index2);
 };
 
 #endif
