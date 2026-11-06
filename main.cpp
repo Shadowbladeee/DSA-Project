@@ -211,27 +211,28 @@ int safeStoi(const string &str, int column, int defaultValue = 0)
 }
 
 // parse roman numeral generation
-int parseGeneration(const string &genStr)
+int parseGeneration(const string &str)
 {
-    if (genStr.find("gen-i") != string::npos)
+    if (str.find("gen-i") != string::npos)
         return 1;
-    if (genStr.find("gen-ii") != string::npos)
+    if (str.find("gen-ii") != string::npos)
         return 2;
-    if (genStr.find("gen-iii") != string::npos)
+    if (str.find("gen-iii") != string::npos)
         return 3;
-    if (genStr.find("gen-iv") != string::npos)
+    if (str.find("gen-iv") != string::npos)
         return 4;
-    if (genStr.find("gen-v") != string::npos)
+    if (str.find("gen-v") != string::npos)
         return 5;
-    if (genStr.find("gen-vi") != string::npos)
+    if (str.find("gen-vi") != string::npos)
         return 6;
-    if (genStr.find("gen-vii") != string::npos)
+    if (str.find("gen-vii") != string::npos)
         return 7;
-    if (genStr.find("gen-viii") != string::npos)
+    if (str.find("gen-viii") != string::npos)
         return 8;
-    if (genStr.find("gen-ix") != string::npos)
+    if (str.find("gen-ix") != string::npos)
         return 9;
-    return safeStoi(genStr, 16, 1);
+
+    return safeStoi(str, 16, 1);
 }
 
 // load database
@@ -277,7 +278,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
         species->abilities = tokens[14];
         species->hiddenAbility = tokens[15];
-        species->generation = safeStoi(tokens[16], 16);
+        species->generation = parseGeneration(tokens[16]);
         species->isLegendary = (tokens[17] == "1" || tokens[17] == "True" || tokens[17] == "true");
         species->isMythical = (tokens[18] == "1" || tokens[18] == "True" || tokens[18] == "true");
 
