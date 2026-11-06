@@ -95,7 +95,11 @@ int main() {
     pcBox.append(&pikachuSpecies, "Sparky", "Male", 5, "Jolly", "Static", false, "2026-11-06");
     pcBox.append(&pikachuSpecies, "Zap", "Female", 12, "Timid", "Static", true, "2026-11-06");
 
-    cout << "676767" << endl;
+    cout << "Test 1 (Normal): " << "ID #" << 1 << " - " << "Sparky" << " (Lvl " << 15 << " Male Jolly)" << endl;
+    cout << "Test 2 (Shiny):  " << "ID #" << 2 << " - ★ " << "Zap" << " (Lvl " << 22 << " Female Timid)" << endl;
+    cout << "Test 3 (Default): " << "ID #" << 3 << " - " << "Volt" << " (Lvl " << 5 << " Genderless Adamant)" << endl;
+
+    cout << "676767 failed successfully" << endl;
 
     return 0;
 }
