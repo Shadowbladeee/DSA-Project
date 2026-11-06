@@ -84,34 +84,18 @@ public:
 };
 
 int main() {
-    // Variables
-    int choice = -1;
-    cout << "Bill's PC initialized!" << endl;
-    
-    while (choice != 0) {
-        cout << "\n Command list" << endl;
-        cout << "1. Move Pokémon" << endl;
-        cout << "2. Withdraw Pokémon" << endl;
-        cout << "3. Deposit Pokémon" << endl;
-        cout << "0. See Ya!" << endl;
-        cout << "Enter command: ";
+    SpeciesData pikachuSpecies = {
+        25, "Pikachu", "Electric", "", 35, 55, 40, 50, 50, 90, 320,
+        0.4f, 6.0f, "Static", "Lightning Rod", 1, 190, false, false,
+        "Yellow", "Forest", "Mouse Pokemon", "When several of these Pokemon gather, their electricity could build and cause lightning storms."
+    };
 
-        // handle valid integer input
-        if (cin >> choice) {
-            if (choice == 0) {
-                cout << "Shutting down PC. Goodbye!" << endl;
-            } else if (choice == 1) {
-                cout << "[placeholder]" << endl;
-            } else {
-                cout << "Invalid command. Please try again." << endl;
-            }
-        }
-        else {
-            cin.clear();
-            cin.ignore(10000, '\n');
-            cout << "Invalid input. Please enter a number." << endl;
-        }
-    }
+    DoublyLinkedList pcBox;
+
+    pcBox.append(&pikachuSpecies, "Sparky", "Male", 5, "Jolly", "Static", false, "2026-11-06");
+    pcBox.append(&pikachuSpecies, "Zap", "Female", 12, "Timid", "Static", true, "2026-11-06");
+
+    cout << "676767" << endl;
 
     return 0;
 }
