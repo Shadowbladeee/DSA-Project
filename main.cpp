@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -8,6 +9,7 @@ struct SpeciesData {
     string name;
     string type1;
     string type2;
+
     int hp;
     int attack;
     int defense;
@@ -15,14 +17,19 @@ struct SpeciesData {
     int spDefense;
     int speed;
     int baseStatTotal;
+
     float heightM;
     float weightKg;
-    string abilities;
+
+    vector<string> abilities;
     string hiddenAbility;
+
     int generation;
     int captureRate;
+
     bool isLegendary;
     bool isMythical;
+    
     string color;
     string habitat;
     string genus;
@@ -44,12 +51,20 @@ struct PokemonNode {
     PokemonNode* prev;
     PokemonNode* next;
 
-    PokemonNode(int instanceID, const SpeciesData* speciesRef, string nick, 
-                string gndr, int lvl, string nat, string abil, bool shiny, string date)
-        : pokemonID(instanceID), species(speciesRef), 
+    PokemonNode(int instanceID, const SpeciesData* speciesRef,
+                string nick, string gndr, int lvl,
+                string nat, string abil, bool shiny, string date)
+        : pokemonID(instanceID),
+          species(speciesRef),
           nickname(nick.empty() ? speciesRef->name : nick),
-          gender(gndr), level(lvl), nature(nat), ability(abil), isShiny(shiny), dateCaught(date),
-          prev(nullptr), next(nullptr) {}
+          gender(gndr),
+          level(lvl),
+          nature(nat),
+          ability(abil),
+          isShiny(shiny),
+          dateCaught(date),
+          prev(nullptr),
+          next(nullptr) {}
 };
 
 class DoublyLinkedList {
@@ -65,11 +80,13 @@ public:
         nextID = 1;
     }
 
-    void append(const SpeciesData* species, string nick, string gndr, 
-                int lvl, string nat, string abil, bool shiny, string date) 
+    void append(const SpeciesData* species, string nick, string gndr,
+                int lvl, string nat, string abil,
+                bool shiny, string date)
     {
         PokemonNode* newNode = new PokemonNode(
-            nextID++, species, nick, gndr, lvl, nat, abil, shiny, date
+            nextID++, species, nick, gndr, lvl,
+            nat, abil, shiny, date
         );
 
         if (head == nullptr) {
@@ -82,6 +99,7 @@ public:
         }
     }
 };
+
 
 int main() {
     // Variables
