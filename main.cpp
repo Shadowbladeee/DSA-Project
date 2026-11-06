@@ -1,12 +1,17 @@
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
 using namespace std;
 
-struct SpeciesData {
+// fixed pkmn data
+struct SpeciesData
+{
     int pokedexNumber;
     string name;
+
     string type1;
     string type2;
 
@@ -21,22 +26,27 @@ struct SpeciesData {
     float heightM;
     float weightKg;
 
-    vector<string> abilities;
+    string abilities;
     string hiddenAbility;
 
     int generation;
-    int captureRate;
-
     bool isLegendary;
     bool isMythical;
-    
+
     string color;
+    string shape;
+    string eggGroups;
     string habitat;
+
+    int captureRate;
+
     string genus;
     string flavorText;
 };
 
-struct PokemonNode {
+// Dynamic pkmn data
+struct PokemonNode
+{
     int pokemonID;
     string nickname;
     string gender;
@@ -46,12 +56,12 @@ struct PokemonNode {
     bool isShiny;
     string dateCaught;
 
-    const SpeciesData* species;
+    const SpeciesData *species;
 
-    PokemonNode* prev;
-    PokemonNode* next;
+    PokemonNode *prev;
+    PokemonNode *next;
 
-    PokemonNode(int instanceID, const SpeciesData* speciesRef,
+    PokemonNode(int instanceID, const SpeciesData *speciesRef,
                 string nick, string gndr, int lvl,
                 string nat, string abil, bool shiny, string date)
         : pokemonID(instanceID),
@@ -67,32 +77,37 @@ struct PokemonNode {
           next(nullptr) {}
 };
 
-class DoublyLinkedList {
+// DLL wow
+class DoublyLinkedList
+{
 private:
-    PokemonNode* head;
-    PokemonNode* tail;
+    PokemonNode *head;
+    PokemonNode *tail;
     int nextID;
 
 public:
-    DoublyLinkedList() {
+    DoublyLinkedList()
+    {
         head = nullptr;
         tail = nullptr;
         nextID = 1;
     }
 
-    void append(const SpeciesData* species, string nick, string gndr,
+    void append(const SpeciesData *species, string nick, string gndr,
                 int lvl, string nat, string abil,
                 bool shiny, string date)
     {
-        PokemonNode* newNode = new PokemonNode(
+        PokemonNode *newNode = new PokemonNode(
             nextID++, species, nick, gndr, lvl,
-            nat, abil, shiny, date
-        );
+            nat, abil, shiny, date);
 
-        if (head == nullptr) {
+        if (head == nullptr)
+        {
             head = newNode;
             tail = newNode;
-        } else {
+        }
+        else
+        {
             tail->next = newNode;
             newNode->prev = tail;
             tail = newNode;
@@ -100,13 +115,150 @@ public:
     }
 };
 
+// CSV file detection
+bool checkCSVFile(const string &filename)
+{
+    ifstream file(filename);
 
-int main() {
+    if (!file.is_open())
+    {
+        cerr << "[ERROR] Could not open file: " << filename << endl;
+        cerr << "Please verify that 'pokemon_complete.csv' is in the root project folder." << endl;
+        return false;
+    }
+
+    file.close();
+    return true;
+};
+
+// parse CSV
+vector<string> parseCSVLine(const string &line)
+{
+    vector<string> result;
+    string current;
+    bool inQuotes = false;
+
+    for (size_t i = 0; i < line.size(); i++)
+    {
+        char ch = line[i];
+
+        if (ch == '"')
+        {
+            if (inQuotes && i + 1 < line.size() && line[i + 1] == '"')
+            {
+                current += '"';
+                i++;
+            }
+            else
+            {
+                inQuotes = !inQuotes;
+            }
+        }
+        else if (ch == ',' && !inQuotes)
+        {
+            result.push_back(current);
+            current.clear();
+        }
+        else
+        {
+            current += ch;
+        }
+    }
+
+    result.push_back(current);
+
+    if (!result.empty() && !result.back().empty() &&
+        result.back().back() == '\r')
+    {
+        result.back().pop_back();
+    }
+
+    return result;
+}
+
+vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
+{
+    vector<SpeciesData *> database;
+    ifstream file(filename);
+
+    if (!file.is_open())
+    {
+        cerr << "[ERROR] Could not open " << filename << endl;
+        return database;
+    }
+
+    string line;
+    getline(file, line);
+
+    while (getline(file, line))
+    {
+        if (line.empty())
+            continue;
+
+        vector<string> tokens = parseCSVLine(line);
+        s if (tokens.size() < 30) continue;
+
+        SpeciesData *species = new SpeciesData;
+        species->pokedexNumber = stoi(tokens[0]);
+        species->name = tokens[1];
+        species->type1 = tokens[2];
+        species->type2 = tokens[3];
+        species->hp = stoi(tokens[4]);
+        species->attack = stoi(tokens[5]);
+        species->defense = stoi(tokens[6]);
+        species->spAttack = stoi(tokens[7]);
+        species->spDefense = stoi(tokens[8]);
+        species->speed = stoi(tokens[9]);
+        species->baseStatTotal = stoi(tokens[10]);
+        species->heightM = tokens[11].empty() ? 0.0f : stof(tokens[11]);
+        species->weightKg = tokens[12].empty() ? 0.0f : stof(tokens[12]);
+
+        // tokens[13] ignored (base_experience)
+
+        species->abilities = tokens[14];
+        species->hiddenAbility = tokens[15];
+        species->generation = stoi(tokens[16]);
+        species->isLegendary = (tokens[17] == "1" || tokens[17] == "True" || tokens[17] == "true");
+        species->isMythical = (tokens[18] == "1" || tokens[18] == "True" || tokens[18] == "true");
+
+        // tokens[19] ignored (is_baby)
+
+        species->color = tokens[20];
+        species->shape = tokens[21];
+        species->eggGroups = tokens[22];
+        species->habitat = tokens[23];
+
+        // tokens[24] ignored (growth_rate)
+
+        species->captureRate = tokens[25].empty() ? 45 : stoi(tokens[25]);
+
+        // tokens[26] ignored (base_happiness)
+
+        species->genus = tokens[27];
+
+        // tokens[28] ignored (evolution_chain_id)
+
+        species->flavorText = tokens[29];
+
+        // tokens[30] ignored (sprite_url)
+
+        database.push_back(species);
+    }
+
+    file.close();
+    return database;
+}
+
+int main()
+{
     // Variables
     int choice = -1;
+    string csvFilename = "pokemon_complete.csv";
+
     cout << "Bill's PC initialized!" << endl;
-    
-    while (choice != 0) {
+
+    while (choice != 0)
+    {
         cout << "\n Command list" << endl;
         cout << "1. Move Pokémon" << endl;
         cout << "2. Withdraw Pokémon" << endl;
@@ -115,16 +267,23 @@ int main() {
         cout << "Enter command: ";
 
         // handle valid integer input
-        if (cin >> choice) {
-            if (choice == 0) {
+        if (cin >> choice)
+        {
+            if (choice == 0)
+            {
                 cout << "Shutting down PC. Goodbye!" << endl;
-            } else if (choice == 1) {
+            }
+            else if (choice == 1)
+            {
                 cout << "[placeholder]" << endl;
-            } else {
+            }
+            else
+            {
                 cout << "Invalid command. Please try again." << endl;
             }
         }
-        else {
+        else
+        {
             cin.clear();
             cin.ignore(10000, '\n');
             cout << "Invalid input. Please enter a number." << endl;
