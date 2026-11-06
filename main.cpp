@@ -9,8 +9,10 @@ int main() {
     
     while (choice != 0) {
         cout << "\n Command list" << endl;
-        cout << "1. Placeholder" << endl;
-        cout << "0. Exit" << endl;
+        cout << "1. Move Pokémon" << endl;
+        cout << "2. Withdraw Pokémon" << endl;
+        cout << "3. Deposit Pokémon" << endl;
+        cout << "0. See Ya!" << endl;
         cout << "Enter command: ";
 
         // handle valid integer input
