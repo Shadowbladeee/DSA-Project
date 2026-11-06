@@ -59,6 +59,7 @@ private:
     int nextID;
 
 public:
+    PokemonNode* getHead() const { return head; }
     DoublyLinkedList() {
         head = nullptr;
         tail = nullptr;
@@ -84,22 +85,26 @@ public:
 };
 
 int main() {
-    SpeciesData pikachuSpecies = {
+SpeciesData pikachu = {
         25, "Pikachu", "Electric", "", 35, 55, 40, 50, 50, 90, 320,
         0.4f, 6.0f, "Static", "Lightning Rod", 1, 190, false, false,
-        "Yellow", "Forest", "Mouse Pokemon", "When several of these Pokemon gather, their electricity could build and cause lightning storms."
+        "Yellow", "Forest", "Mouse Pokemon", "Stores electricity in cheek pouches."
     };
 
     DoublyLinkedList pcBox;
+    pcBox.append(&pikachu, "Sparky", "Male", 15, "Jolly", "Static", false, "2026-11-06");
+    pcBox.append(&pikachu, "Zap", "Female", 22, "Timid", "Lightning Rod", true, "2026-11-06");
+    pcBox.append(&pikachu, "Volt", "Genderless", 5, "Adamant", "Static", false, "2026-11-06");
 
-    pcBox.append(&pikachuSpecies, "Sparky", "Male", 5, "Jolly", "Static", false, "2026-11-06");
-    pcBox.append(&pikachuSpecies, "Zap", "Female", 12, "Timid", "Static", true, "2026-11-06");
+    PokemonNode* n1 = pcBox.getHead(); 
+    PokemonNode* n2 = n1 ? n1->next : nullptr;
+    PokemonNode* n3 = n2 ? n2->next : nullptr;
 
-    cout << "Test 1 (Normal): " << "ID #" << 1 << " - " << "Sparky" << " (Lvl " << 15 << " Male Jolly)" << endl;
-    cout << "Test 2 (Shiny):  " << "ID #" << 2 << " - ★ " << "Zap" << " (Lvl " << 22 << " Female Timid)" << endl;
-    cout << "Test 3 (Default): " << "ID #" << 3 << " - " << "Volt" << " (Lvl " << 5 << " Genderless Adamant)" << endl;
-
-    cout << "676767 failed successfully" << endl;
+    if (n1 && n2 && n3) {
+        cout << "Node 1: #" << n1->pokemonID << " " << n1->nickname << " (" << n1->species->name << ")" << endl;
+        cout << "Node 2: #" << n2->pokemonID << " " << (n2->isShiny ? "★ " : "") << n2->nickname << endl;
+        cout << "Node 3: #" << n3->pokemonID << " " << n3->nickname << " Lvl " << n3->level << endl;
+    }
 
     return 0;
 }
