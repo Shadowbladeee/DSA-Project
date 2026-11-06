@@ -176,6 +176,41 @@ vector<string> parseCSVLine(const string &line)
     return result;
 }
 
+// safestoi helper
+int safeStoi(const string &str, int column, int defaultValue = 0)
+{
+    if (str.empty())
+    {
+        cerr << "[WARNING] Empty value at column "
+             << column << ". Using default: "
+             << defaultValue << endl;
+
+        return defaultValue;
+    }
+
+    try
+    {
+        size_t pos;
+        int value = stoi(str, &pos);
+
+        if (pos != str.size())
+        {
+            throw invalid_argument("Invalid characters");
+        }
+
+        return value;
+    }
+    catch (const exception &e)
+    {
+        cerr << "[WARNING] Invalid value at column "
+             << column << ": [" << str << "]"
+             << ". Using default: " << defaultValue << endl;
+
+        return defaultValue;
+    }
+}
+
+// load database
 vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 {
     vector<SpeciesData *> database;
@@ -200,17 +235,17 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
             continue;
 
         SpeciesData *species = new SpeciesData;
-        species->pokedexNumber = stoi(tokens[0]);
+        species->pokedexNumber = safeStoi(tokens[0], 0);
         species->name = tokens[1];
         species->type1 = tokens[2];
         species->type2 = tokens[3];
-        species->hp = stoi(tokens[4]);
-        species->attack = stoi(tokens[5]);
-        species->defense = stoi(tokens[6]);
-        species->spAttack = stoi(tokens[7]);
-        species->spDefense = stoi(tokens[8]);
-        species->speed = stoi(tokens[9]);
-        species->baseStatTotal = stoi(tokens[10]);
+        species->hp = safeStoi(tokens[4], 4);
+        species->attack = safeStoi(tokens[5], 5);
+        species->defense = safeStoi(tokens[6], 6);
+        species->spAttack = safeStoi(tokens[7], 7);
+        species->spDefense = safeStoi(tokens[8], 8);
+        species->speed = safeStoi(tokens[9], 9);
+        species->baseStatTotal = safeStoi(tokens[10], 10);
         species->heightM = tokens[11].empty() ? 0.0f : stof(tokens[11]);
         species->weightKg = tokens[12].empty() ? 0.0f : stof(tokens[12]);
 
@@ -218,7 +253,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
         species->abilities = tokens[14];
         species->hiddenAbility = tokens[15];
-        species->generation = stoi(tokens[16]);
+        species->generation = safeStoi(tokens[16], 16);
         species->isLegendary = (tokens[17] == "1" || tokens[17] == "True" || tokens[17] == "true");
         species->isMythical = (tokens[18] == "1" || tokens[18] == "True" || tokens[18] == "true");
 
@@ -231,7 +266,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
         // tokens[24] ignored (growth_rate)
 
-        species->captureRate = tokens[25].empty() ? 45 : stoi(tokens[25]);
+        species->captureRate = tokens[25].empty() ? 45 : safeStoi(tokens[25], 25, 45);
 
         // tokens[26] ignored (base_happiness)
 
@@ -250,11 +285,39 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
     return database;
 }
 
+// lookup helper
+const SpeciesData *getSpeciesByPokedexNumber(const vector<SpeciesData *> &database, int dexNum)
+{
+    for (const auto *species : database)
+    {
+        if (species->pokedexNumber == dexNum)
+        {
+            return species;
+        }
+    }
+    return nullptr;
+}
+
 int main()
 {
     // Variables
     int choice = -1;
     string csvFilename = "pokemon_complete.csv";
+
+    if (!checkCSVFile(csvFilename))
+    {
+        return 1;
+    }
+
+    vector<SpeciesData *> pokedex = loadSpeciesDatabase(csvFilename);
+
+    if (pokedex.empty())
+    {
+        cout << "[ERROR] Database failed to load species." << endl;
+        return 1;
+    }
+
+    DoublyLinkedList pcBox;
 
     cout << "Bill's PC initialized!" << endl;
 
@@ -289,6 +352,11 @@ int main()
             cin.ignore(10000, '\n');
             cout << "Invalid input. Please enter a number." << endl;
         }
+    }
+
+    for (auto *species : pokedex)
+    {
+        delete species;
     }
 
     return 0;
