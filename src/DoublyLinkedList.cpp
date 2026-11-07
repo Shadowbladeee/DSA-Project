@@ -176,3 +176,13 @@ bool DoublyLinkedList::swapNodes(int index1, int index2)
 
     return true;
 }
+
+bool DoublyLinkedList::releaseByPosition(int position)
+{
+    PokemonNode *target = removeByPosition(position);
+    if (target == nullptr)
+        return false;
+
+    delete target; // Free dynamically allocated memory
+    return true;
+}

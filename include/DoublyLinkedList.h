@@ -32,6 +32,8 @@ public:
     bool swapNodes(int index1, int index2);
 
     PokemonNode *removeByPosition(int position);
+
+    bool releaseByPosition(int position);
 };
 
 #endif

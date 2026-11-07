@@ -37,6 +37,7 @@ public:
     DoublyLinkedList &getCurrentList() { return boxes[currentBoxIndex].list; }
 
     bool moveBetweenBoxes(int sourceBoxIndex, int targetBoxIndex, int instanceID);
+    bool moveBetweenBoxesByPosition(int srcBoxNum, int tgtBoxNum, int slotPosition);
 };
 
 #endif
