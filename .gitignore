@@ -1,2 +1,8 @@
 billsPC
 .vscode/
+
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.idb

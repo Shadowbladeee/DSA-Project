@@ -30,6 +30,8 @@ public:
     void insertNode(PokemonNode *node);
 
     bool swapNodes(int index1, int index2);
+
+    PokemonNode *removeByPosition(int position);
 };
 
 #endif

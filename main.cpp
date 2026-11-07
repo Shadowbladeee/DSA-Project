@@ -19,16 +19,12 @@ void displayParty(const DoublyLinkedList &party)
     party.displayBox();
 }
 
+// In main.cpp
 void depositPokemon(DoublyLinkedList &party, PCSystem &pc)
 {
     if (party.getCount() <= 1)
     {
         cout << "[ERROR] You must keep at least 1 Pokémon in your party at all times!" << endl;
-        return;
-    }
-    if (party.isEmpty())
-    {
-        cout << "[ERROR] Party is empty!" << endl;
         return;
     }
     if (pc.getCurrentBoxCount() >= BOX_CAPACITY)
@@ -38,11 +34,11 @@ void depositPokemon(DoublyLinkedList &party, PCSystem &pc)
     }
 
     displayParty(party);
-    int targetID;
-    cout << "Enter Pokémon ID to deposit: ";
-    cin >> targetID;
+    int slot;
+    cout << "Enter Party Slot # to deposit: ";
+    cin >> slot;
 
-    PokemonNode *moved = party.removeByID(targetID);
+    PokemonNode *moved = party.removeByPosition(slot);
     if (moved)
     {
         pc.getCurrentList().insertNode(moved);
@@ -50,7 +46,7 @@ void depositPokemon(DoublyLinkedList &party, PCSystem &pc)
     }
     else
     {
-        cout << "[ERROR] ID not found in party." << endl;
+        cout << "[ERROR] Invalid party slot!" << endl;
     }
 }
 
@@ -63,16 +59,16 @@ void withdrawPokemon(DoublyLinkedList &party, PCSystem &pc)
     }
     if (pc.getCurrentList().isEmpty())
     {
-        cout << "[ERROR] Active box [" << pc.getCurrentBoxName() << "] is empty!" << endl;
+        cout << "[ERROR] Box [" << pc.getCurrentBoxName() << "] is empty!" << endl;
         return;
     }
 
     pc.displayCurrentBox();
-    int targetID;
-    cout << "Enter Pokémon ID to withdraw: ";
-    cin >> targetID;
+    int slot;
+    cout << "Enter Box Slot # to withdraw: ";
+    cin >> slot;
 
-    PokemonNode *moved = pc.getCurrentList().removeByID(targetID);
+    PokemonNode *moved = pc.getCurrentList().removeByPosition(slot);
     if (moved)
     {
         party.insertNode(moved);
@@ -80,7 +76,7 @@ void withdrawPokemon(DoublyLinkedList &party, PCSystem &pc)
     }
     else
     {
-        cout << "[ERROR] ID not found in active box." << endl;
+        cout << "[ERROR] Invalid box slot!" << endl;
     }
 }
 

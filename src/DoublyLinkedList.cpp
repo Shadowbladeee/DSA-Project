@@ -66,8 +66,8 @@ void DoublyLinkedList::displayBox() const
     int slot = 1;
     while (current != nullptr)
     {
-        cout << "[" << slot << "] ID #" << current->pokemonID << ": "
-             << current->nickname << " (" << current->species->name
+        cout << slot << ": " << current->nickname
+             << " (" << current->species->name
              << ") - Lv. " << current->level << endl;
         current = current->next;
         slot++;
@@ -99,6 +99,34 @@ PokemonNode *DoublyLinkedList::removeByID(int instanceID)
         current = current->next;
     }
     return nullptr;
+}
+
+PokemonNode *DoublyLinkedList::removeByPosition(int position)
+{
+    if (position < 1 || position > count || head == nullptr)
+        return nullptr;
+
+    PokemonNode *current = head;
+    for (int i = 1; i < position; i++)
+    {
+        current = current->next;
+    }
+
+    if (current->prev != nullptr)
+        current->prev->next = current->next;
+    else
+        head = current->next;
+
+    if (current->next != nullptr)
+        current->next->prev = current->prev;
+    else
+        tail = current->prev;
+
+    current->prev = nullptr;
+    current->next = nullptr;
+    count--;
+
+    return current;
 }
 
 void DoublyLinkedList::insertNode(PokemonNode *node)
