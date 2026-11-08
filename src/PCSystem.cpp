@@ -1,5 +1,7 @@
 #include "../include/PCSystem.h"
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 
 using namespace std;
 
@@ -91,4 +93,34 @@ bool PCSystem::moveBetweenBoxesByPosition(int sourceBox, int targetBox, int slot
 
     boxes[tgtIdx].list.insertNode(moved);
     return true;
+}
+
+static string toLower(string s)
+{
+    transform(s.begin(), s.end(), s.begin(),
+              [](unsigned char c) { return tolower(c); });
+    return s;
+}
+
+vector<SearchResult> PCSystem::search(const string &query)
+{
+    vector<SearchResult> results;
+    const string q = toLower(query);
+    if (q.empty())
+        return results;
+
+    for (int i = 0; i < MAX_BOXES; i++)
+    {
+        int slot = 1;
+        for (PokemonNode *cur = boxes[i].list.getHead(); cur != nullptr; cur = cur->next, slot++)
+        {
+            string species = cur->species ? cur->species->name : "";
+            if (toLower(cur->nickname).find(q) != string::npos ||
+                toLower(species).find(q) != string::npos)
+            {
+                results.push_back({i + 1, boxes[i].name, slot, cur->nickname, species});
+            }
+        }
+    }
+    return results;
 }
