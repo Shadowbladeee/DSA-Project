@@ -37,6 +37,8 @@ struct SpeciesData
 
     std::string genus;
     std::string flavorText;
+
+    std::string spritePath;
 };
 
 #endif

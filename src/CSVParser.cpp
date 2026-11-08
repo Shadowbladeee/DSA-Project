@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <unordered_set>
 
 using namespace std;
 
@@ -126,8 +127,16 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
             continue;
 
         vector<string> tokens = parseCSVLine(line);
+
         if (tokens.size() < 30)
             continue;
+
+        int dexNum = safeStoi(tokens[0], 0);
+
+        if (dexNum > 1025 && ALLOWED_REGIONAL_IDS.find(dexNum) == ALLOWED_REGIONAL_IDS.end())
+        {
+            continue;
+        }
 
         SpeciesData *species = new SpeciesData;
         species->pokedexNumber = safeStoi(tokens[0], 0);
@@ -159,6 +168,8 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
         species->genus = tokens[27];
         species->flavorText = tokens[29];
 
+        species->spritePath = "sprites/" + to_string(species->pokedexNumber) + ".png";
+
         database.push_back(species);
     }
 
@@ -177,3 +188,20 @@ const SpeciesData *getSpeciesByPokedexNumber(const vector<SpeciesData *> &databa
     }
     return nullptr;
 }
+
+// Whitelisted regional variant forms
+const std::unordered_set<int> ALLOWED_REGIONAL_IDS = {
+    // Alolan
+    10091, 10092, 10100, 10101, 10102, 10103, 10104, 10105, 10106,
+    10107, 10108, 10109, 10110, 10111, 10112, 10113, 10114, 10115,
+
+    // Galarian
+    10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10169,
+    10170, 10171, 10172, 10173, 10174, 10175, 10176, 10177, 10179, 10180,
+
+    // Hisuian
+    10229, 10230, 10231, 10232, 10233, 10234, 10235, 10236, 10237,
+    10238, 10239, 10240, 10241, 10242, 10243, 10244,
+
+    // Paldean
+    10250, 10251, 10252, 10253};
