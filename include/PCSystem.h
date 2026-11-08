@@ -16,6 +16,15 @@ struct Box
     Box(std::string boxName = "") : name(boxName) {}
 };
 
+struct SearchResult
+{
+    int boxNumber; // 1-based
+    std::string boxName;
+    int slot; // 1-based
+    std::string nickname;
+    std::string speciesName;
+};
+
 class PCSystem
 {
 private:
@@ -27,6 +36,7 @@ public:
 
     int getCurrentBoxIndex() const { return currentBoxIndex; }
     std::string getCurrentBoxName() const { return boxes[currentBoxIndex].name; }
+    std::vector<SearchResult> search(const std::string &query);
     int getCurrentBoxCount() const { return boxes[currentBoxIndex].list.getCount(); }
 
     bool switchBox(int boxNumber);

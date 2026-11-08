@@ -180,6 +180,23 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
 }
 
+void searchPokemonPC(PCSystem &pc, const string &query)
+{
+    cout << "\n=== SEARCH RESULTS FOR \"" << query << "\" ===" << endl;
+    vector<SearchResult> results = pc.search(query);
+
+    if (results.empty())
+    {
+        cout << "(No Pokémon found matching \"" << query << "\")" << endl;
+        return;
+    }
+    for (const auto &r : results)
+    {
+        cout << "Box " << r.boxNumber << " (" << r.boxName << ") Slot " << r.slot
+             << ": " << r.nickname << " (" << r.speciesName << ")" << endl;
+    }
+}
+
 int main()
 {
     string csvFilename = "pokemon_complete.csv";
@@ -223,6 +240,7 @@ int main()
         cout << "1. Manage Party (" << party.getCount() << "/" << MAX_PARTY_SIZE << ")" << endl;
         cout << "2. Manage Active Box (" << pc.getCurrentBoxCount() << "/" << BOX_CAPACITY << ")" << endl;
         cout << "3. Box Settings (Switch / Rename / Overview)" << endl;
+        cout << "4. Search Pokémon in PC" << endl;
         cout << "0. Exit" << endl;
         cout << "Select option: ";
 
@@ -281,6 +299,15 @@ int main()
                 {
                     pc.listAllBoxes();
                 }
+            
+            }
+            else if (choice == 4)
+            {
+            string searchQuery;
+            cout << "Enter Pokémon nickname or species to search: ";
+            cin.ignore();
+            getline(cin, searchQuery);
+            searchPokemonPC(pc, searchQuery);
             }
         }
         else
