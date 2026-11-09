@@ -200,7 +200,7 @@ void printSearchResults(const string &title, const vector<SearchResult> &results
     for (const auto &r : results)
     {
         cout << "Box " << r.boxNumber << " (" << r.boxName << ") Slot " << r.slot
-             << ": " << r.nickname << " (#" << setfill('0') << setw(3) << r.dexNumber
+             << ": " << r.nickname << " (#" << right << setfill('0') << setw(3) << r.dexNumber
              << setfill(' ') << " " << r.speciesName << ") ["
              << r.type1 << (r.type2.empty() ? "" : "/" + r.type2) << "] Gen "
              << r.generation << endl;
@@ -223,6 +223,7 @@ string chooseType()
         if ((i + 1) % 3 == 0)
             cout << endl;
     }
+    cout << right;
     cout << " 0. Cancel" << endl;
     cout << "Choice: ";
 
