@@ -1,5 +1,6 @@
 #include "include/CSVParser.h"
 #include "include/PCSystem.h"
+#include "include/SaveSystem.h"
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -18,6 +19,27 @@
 using namespace std;
 
 const int MAX_PARTY_SIZE = 6;
+const string SAVE_FILE = "pokemon_save.csv";
+
+int readChoice();
+bool askYesNo(const string &prompt);
+
+const PokemonNode *nodeAt(const DoublyLinkedList &list, int position)
+{
+    const PokemonNode *cur = list.getHead();
+    for (int i = 1; cur != nullptr && i < position; ++i)
+        cur = cur->next;
+    return cur;
+}
+
+bool validChoice(int pick, int maxOption)
+{
+    if (pick >= 1 && pick <= maxOption)
+        return true;
+    if (pick != 0)
+        cout << "[ERROR] Invalid choice." << endl;
+    return false;
+}
 
 void displayParty(const DoublyLinkedList &party)
 {
@@ -45,8 +67,8 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     cout << "0. Cancel" << endl;
     cout << "Choice: ";
 
-    int action;
-    if (!(cin >> action))
+    int action = readChoice();
+    if (!validChoice(action, 3))
         return;
 
     if (action == 1)
@@ -76,9 +98,8 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
             return;
         }
-        int targetPos;
         cout << "Swap slot " << slot << " with slot #: ";
-        cin >> targetPos;
+        int targetPos = readChoice();
         if (party.swapNodes(slot, targetPos))
         {
             cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
@@ -95,6 +116,14 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             cout << "[ERROR] Cannot release your last Pokémon!" << endl;
             return;
         }
+
+        const PokemonNode *p = nodeAt(party, slot);
+        if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
+        {
+            cout << "Release cancelled." << endl;
+            return;
+        }
+
         if (party.releaseByPosition(slot))
         {
             cout << "[SUCCESS] Released Pokémon at slot " << slot << "." << endl;
@@ -123,8 +152,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     cout << "0. Cancel" << endl;
     cout << "Choice: ";
 
-    int action;
-    if (!(cin >> action))
+    int action = readChoice();
+    if (!validChoice(action, 4))
         return;
 
     if (action == 1)
@@ -149,9 +178,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             cout << "[ERROR] Need at least 2 Pokémon in box to swap!" << endl;
             return;
         }
-        int targetPos;
         cout << "Swap slot " << slot << " with slot #: ";
-        cin >> targetPos;
+        int targetPos = readChoice();
         if (boxList.swapNodes(slot, targetPos))
         {
             cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
@@ -163,10 +191,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
     else if (action == 3)
     {
-        int targetBox;
         cout << "Enter Target Box (1-30): ";
-        cin >> targetBox;
-
+        int targetBox = readChoice();
         int srcBox = pc.getCurrentBoxIndex() + 1;
 
         if (pc.moveBetweenBoxesByPosition(srcBox, targetBox, slot))
@@ -180,6 +206,13 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
     else if (action == 4)
     {
+        const PokemonNode *p = nodeAt(boxList, slot);
+        if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
+        {
+            cout << "Release cancelled." << endl;
+            return;
+        }
+
         if (boxList.releaseByPosition(slot))
         {
             cout << "[SUCCESS] Released Pokémon at slot " << slot << "." << endl;
@@ -317,12 +350,55 @@ int readChoice()
     int v = 0;
     if (!(cin >> v))
     {
+        if (cin.eof())
+            return 0; // input closed: treat as back / exit
         cin.clear();
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
         return -1;
     }
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     return v;
+}
+
+bool askYesNo(const string &prompt)
+{
+    cout << prompt << " (y/n): ";
+    string answer;
+    getline(cin, answer);
+    return !answer.empty() && (answer[0] == 'y' || answer[0] == 'Y');
+}
+
+void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesData *> &pokedex)
+{
+    cout << "\n--- SAVE / LOAD ---" << endl;
+    cout << "1. Save" << endl;
+    cout << "2. Load" << endl;
+    cout << "0. Back" << endl;
+    cout << "Choice: ";
+    int choice = readChoice();
+    if (!validChoice(choice, 2))
+        return;
+
+    if (choice == 1)
+    {
+        if (saveGame(SAVE_FILE, pc, party))
+            cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;
+    }
+    else if (choice == 2)
+    {
+        if (!saveFileExists(SAVE_FILE))
+        {
+            cout << "[ERROR] No save file found." << endl;
+            return;
+        }
+        if (!askYesNo("Loading replaces your current party and boxes. Continue?"))
+        {
+            cout << "Load cancelled." << endl;
+            return;
+        }
+        if (loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE))
+            cout << "[SUCCESS] Loaded " << SAVE_FILE << "." << endl;
+    }
 }
 
 int chooseSecondType()
@@ -359,7 +435,6 @@ int chooseSecondType()
     return pick;
 }
 
-// Species name, A-Z (case-insensitive); ties broken by nickname
 bool nameLess(const PokemonNode &a, const PokemonNode &b)
 {
     string na = toLowerStr(a.species ? a.species->name : "");
@@ -408,7 +483,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "0. Back" << endl;
     cout << "Choice: ";
     int target = readChoice();
-    if (target != 1 && target != 2)
+    if (!validChoice(target, 2))
         return;
 
     DoublyLinkedList &list = (target == 1) ? pc.getCurrentList() : party;
@@ -425,6 +500,8 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "0. Back" << endl;
     cout << "Choice: ";
     int field = readChoice();
+    if (!validChoice(field, 3))
+        return;
 
     if (field == 1)
     {
@@ -432,7 +509,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "2. Descending (Z-A)" << endl;
         cout << "Choice: ";
         int dir = readChoice();
-        if (dir != 1 && dir != 2)
+        if (!validChoice(dir, 2))
             return;
 
         if (dir == 1)
@@ -449,7 +526,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "2. Descending (Fairy -> Normal)" << endl;
         cout << "Choice: ";
         int dir = readChoice();
-        if (dir != 1 && dir != 2)
+        if (!validChoice(dir, 2))
             return;
 
         list.sort(typeOrder(dir == 2));
@@ -464,7 +541,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "2. Descending (high -> low)" << endl;
         cout << "Choice: ";
         int dir = readChoice();
-        if (dir != 1 && dir != 2)
+        if (!validChoice(dir, 2))
             return;
 
         if (dir == 1)
@@ -501,39 +578,51 @@ int main()
     PCSystem pc;
     DoublyLinkedList party;
 
-    const SpeciesData *starter = getSpeciesByPokedexNumber(pokedex, 1);
-    if (starter)
-        party.append(starter, "Neil", "Male", 19, "Overgrow", "Overgrow", false, "2026-11-06");
+    bool loaded = false;
+    if (saveFileExists(SAVE_FILE))
+    {
+        loaded = loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE);
+        if (loaded)
+            cout << "[INFO] Loaded " << SAVE_FILE << "." << endl;
+    }
 
-    const SpeciesData *pidgey = getSpeciesByPokedexNumber(pokedex, 16);
-    if (pidgey)
-        party.append(pidgey, "the biggest bird", "Female", 3, "Keen Eye", "Keen Eye", false, "2026-11-06");
+    if (!loaded)
+    {
+        const SpeciesData *starter = getSpeciesByPokedexNumber(pokedex, 1);
+        if (starter)
+            party.append(starter, "Neil", "Male", 19, "Overgrow", "Overgrow", false, "2026-11-06");
 
-    const SpeciesData *charmander = getSpeciesByPokedexNumber(pokedex, 4);
-    if (charmander)
-        party.append(charmander, "fire", "Male", 5, "Blaze", "Blaze", false, "2026-11-06");
+        const SpeciesData *pidgey = getSpeciesByPokedexNumber(pokedex, 16);
+        if (pidgey)
+            party.append(pidgey, "the biggest bird", "Female", 3, "Keen Eye", "Keen Eye", false, "2026-11-06");
 
-    const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
-    if (squirtle)
-        pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Torrent", true, "2026-11-06");
-    
-    const SpeciesData *marshtomp = getSpeciesByPokedexNumber(pokedex, 259);
-    if (marshtomp)
-        pc.getCurrentList().append(marshtomp, "mudkip", "Male", 16, "Torrent", "Damp", false, "2026-11-06");
-    
-    const SpeciesData *garchomp = getSpeciesByPokedexNumber(pokedex, 445);
-    if (garchomp)
-        pc.getCurrentList().append(garchomp, "garchomp", "Male", 50, "Rough Skin", "Jolly", false, "2026-11-06");
+        const SpeciesData *charmander = getSpeciesByPokedexNumber(pokedex, 4);
+        if (charmander)
+            party.append(charmander, "fire", "Male", 5, "Blaze", "Blaze", false, "2026-11-06");
 
-    const SpeciesData *gardevoir = getSpeciesByPokedexNumber(pokedex, 282);
-    if (gardevoir)
-        pc.getCurrentList().append(gardevoir, "gardevoir", "Female", 50, "Synchronize", "Trace", false, "2026-11-06");
+        const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
+        if (squirtle)
+            pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Torrent", true, "2026-11-06");
+        
+        const SpeciesData *marshtomp = getSpeciesByPokedexNumber(pokedex, 259);
+        if (marshtomp)
+            pc.getCurrentList().append(marshtomp, "mudkip", "Male", 16, "Torrent", "Damp", false, "2026-11-06");
+        
+        const SpeciesData *garchomp = getSpeciesByPokedexNumber(pokedex, 445);
+        if (garchomp)
+            pc.getCurrentList().append(garchomp, "garchomp", "Male", 50, "Rough Skin", "Jolly", false, "2026-11-06");
 
-    const SpeciesData *Ursaring = getSpeciesByPokedexNumber(pokedex, 217);
-    if (Ursaring)
-        pc.getCurrentList().append(Ursaring, "ursaring", "Male", 50, "Guts", "Quick Feet", false, "2026-11-06");
+        const SpeciesData *gardevoir = getSpeciesByPokedexNumber(pokedex, 282);
+        if (gardevoir)
+            pc.getCurrentList().append(gardevoir, "gardevoir", "Female", 50, "Synchronize", "Trace", false, "2026-11-06");
 
-    int choice = -1;
+        const SpeciesData *Ursaring = getSpeciesByPokedexNumber(pokedex, 217);
+        if (Ursaring)
+            pc.getCurrentList().append(Ursaring, "ursaring", "Male", 50, "Guts", "Quick Feet", false, "2026-11-06");
+
+    }
+
+        int choice = -1;
     while (choice != 0)
     {
         cout << "\n=== POKEMON STORAGE SYSTEM ===" << endl;
@@ -543,19 +632,20 @@ int main()
         cout << "3. Box Settings (Switch / Rename / Overview)" << endl;
         cout << "4. Search Pokémon in PC" << endl;
         cout << "5. Sort Pokémon" << endl;
+        cout << "6. Save / Load" << endl;
         cout << "0. Exit" << endl;
         cout << "Select option: ";
 
-        if (cin >> choice)
+        choice = readChoice();
+        if (choice != -1)
         {
             if (choice == 1)
             {
                 displayParty(party);
                 if (!party.isEmpty())
                 {
-                    int slot;
                     cout << "Select Slot # to manage (0 to go back): ";
-                    cin >> slot;
+                    int slot = readChoice();
                     if (slot != 0)
                         handlePartySubMenu(party, pc, slot);
                 }
@@ -565,9 +655,8 @@ int main()
                 pc.displayCurrentBox();
                 if (!pc.getCurrentList().isEmpty())
                 {
-                    int slot;
                     cout << "Select Slot # to manage (0 to go back): ";
-                    cin >> slot;
+                    int slot = readChoice();
                     if (slot != 0)
                         handleBoxSubMenu(pc, party, slot);
                 }
@@ -580,20 +669,20 @@ int main()
                 cout << "3. View All Boxes Overview" << endl;
                 cout << "0. Back" << endl;
                 cout << "Choice: ";
-                int sub;
-                cin >> sub;
+                int sub = readChoice();
+                if (!validChoice(sub, 3))
+                    continue;
+
                 if (sub == 1)
                 {
-                    int boxNum;
                     cout << "Enter Box (1-30): ";
-                    cin >> boxNum;
+                    int boxNum = readChoice();
                     pc.switchBox(boxNum);
                 }
                 else if (sub == 2)
                 {
                     string name;
                     cout << "New name: ";
-                    cin.ignore();
                     getline(cin, name);
                     pc.renameCurrentBox(name);
                 }
@@ -601,7 +690,6 @@ int main()
                 {
                     pc.listAllBoxes();
                 }
-            
             }
             else if (choice == 4)
             {
@@ -612,14 +700,9 @@ int main()
                 cout << "4. By Dex number" << endl;
                 cout << "0. Back" << endl;
                 cout << "Choice: ";
-                int sub = 0;
-                if (!(cin >> sub))
-                {
-                    cin.clear();
-                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                int sub = readChoice();
+                if (!validChoice(sub, 4))
                     continue;
-                }
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
                 string query;
                 if (sub == 1)
@@ -677,15 +760,28 @@ int main()
             {
                 handleSortMenu(pc, party);
             }
+            else if (choice == 6)
+            {
+                handleSaveMenu(pc, party, pokedex);
+            }
+            else if (choice != 0)
+            {
+                cout << "[ERROR] Invalid choice." << endl;
+            }
         }
-        else
+
+                else
         {
-            cin.clear();
-            cin.ignore(10000, '\n');
+            cout << "[ERROR] Please enter a number." << endl;
         }
     }
 
-    // Clean allocated Pokedex memory
+    if (askYesNo("Save before exiting?"))
+    {
+        if (saveGame(SAVE_FILE, pc, party))
+            cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;
+    }
+
     for (auto *species : pokedex)
     {
         delete species;

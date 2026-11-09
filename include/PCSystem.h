@@ -39,6 +39,11 @@ private:
 public:
     PCSystem();
 
+    DoublyLinkedList &getList(int boxNumber) { return boxes[boxNumber - 1].list; }
+    const std::string &getBoxName(int boxNumber) const { return boxes[boxNumber - 1].name; }
+    void setBoxName(int boxNumber, const std::string &name) { boxes[boxNumber - 1].name = name; }
+    void setCurrentBox(int boxNumber) { currentBoxIndex = boxNumber - 1; }
+
     int getCurrentBoxIndex() const { return currentBoxIndex; }
     std::string getCurrentBoxName() const { return boxes[currentBoxIndex].name; }
     std::vector<SearchResult> search(const std::string &query);
