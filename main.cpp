@@ -1,8 +1,15 @@
 #include "include/CSVParser.h"
 #include "include/PCSystem.h"
+#include "include/PokemonSummary.h"
 #include <iostream>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
+
+#include <windows.h>
+
+#endif
 
 using namespace std;
 
@@ -199,6 +206,10 @@ void searchPokemonPC(PCSystem &pc, const string &query)
 
 int main()
 {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     string csvFilename = "pokemon_complete.csv";
     if (!checkCSVFile(csvFilename))
     {
@@ -231,6 +242,12 @@ int main()
     const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
     if (squirtle)
         pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Torrent", true, "2026-11-06");
+
+    int testDexNum = 10091;
+
+    const SpeciesData *target = getSpeciesByPokedexNumber(pokedex, testDexNum);
+
+    printPokemonSummary(target);
 
     int choice = -1;
     while (choice != 0)
@@ -299,15 +316,14 @@ int main()
                 {
                     pc.listAllBoxes();
                 }
-            
             }
             else if (choice == 4)
             {
-            string searchQuery;
-            cout << "Enter Pokémon nickname or species to search: ";
-            cin.ignore();
-            getline(cin, searchQuery);
-            searchPokemonPC(pc, searchQuery);
+                string searchQuery;
+                cout << "Enter Pokémon nickname or species to search: ";
+                cin.ignore();
+                getline(cin, searchQuery);
+                searchPokemonPC(pc, searchQuery);
             }
         }
         else

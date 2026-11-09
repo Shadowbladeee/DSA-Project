@@ -5,7 +5,8 @@
 
 struct SpeciesData
 {
-    int pokedexNumber;
+    int internalID;
+    int pokedexID;
     std::string name;
     std::string type1;
     std::string type2;

@@ -2,6 +2,7 @@
 #define PC_SYSTEM_H
 
 #include "DoublyLinkedList.h"
+#include "Species.h"
 #include <string>
 #include <vector>
 
@@ -18,9 +19,9 @@ struct Box
 
 struct SearchResult
 {
-    int boxNumber; // 1-based
+    int boxNumber;
     std::string boxName;
-    int slot; // 1-based
+    int slot;
     std::string nickname;
     std::string speciesName;
 };

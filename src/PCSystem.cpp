@@ -2,6 +2,8 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include <vector>
+#include <string>
 
 using namespace std;
 
@@ -98,7 +100,8 @@ bool PCSystem::moveBetweenBoxesByPosition(int sourceBox, int targetBox, int slot
 static string toLower(string s)
 {
     transform(s.begin(), s.end(), s.begin(),
-              [](unsigned char c) { return tolower(c); });
+              [](unsigned char c)
+              { return tolower(c); });
     return s;
 }
 
@@ -123,4 +126,29 @@ vector<SearchResult> PCSystem::search(const string &query)
         }
     }
     return results;
+}
+
+int getDisplayPokedexNumber(const SpeciesData *species, const std::vector<SpeciesData *> &database)
+{
+    if (!species)
+        return 0;
+    if (species->pokedexID <= 1025)
+        return species->pokedexID;
+
+    string baseName = species->name;
+    size_t dashPos = baseName.find('-');
+    if (dashPos != string::npos)
+    {
+        baseName = baseName.substr(0, dashPos);
+    }
+
+    for (const auto *baseSpecies : database)
+    {
+        if (baseSpecies->pokedexID <= 1025 && baseSpecies->name == baseName)
+        {
+            return baseSpecies->pokedexID;
+        }
+    }
+
+    return species->pokedexID;
 }

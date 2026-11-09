@@ -107,6 +107,23 @@ int parseGeneration(const string &str)
     return safeStoi(str, 16, 1);
 }
 
+// Whitelisted regional variant forms
+const unordered_set<int> ALLOWED_REGIONAL_IDS = {
+    // Alolan
+    10091, 10092, 10100, 10101, 10102, 10103, 10104, 10105, 10106,
+    10107, 10108, 10109, 10110, 10111, 10112, 10113, 10114, 10115,
+
+    // Galarian
+    10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10169,
+    10170, 10171, 10172, 10173, 10174, 10175, 10176, 10177, 10179, 10180,
+
+    // Hisuian
+    10229, 10230, 10231, 10232, 10233, 10234, 10235, 10236, 10237,
+    10238, 10239, 10240, 10241, 10242, 10243, 10244,
+
+    // Paldean
+    10250, 10251, 10252, 10253};
+
 vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 {
     vector<SpeciesData *> database;
@@ -139,8 +156,30 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
         }
 
         SpeciesData *species = new SpeciesData;
-        species->pokedexNumber = safeStoi(tokens[0], 0);
+        species->internalID = safeStoi(tokens[0], 0);
         species->name = tokens[1];
+
+        species->pokedexID = species->internalID;
+
+        if (species->internalID > 1025)
+        {
+            std::string baseName = species->name;
+            size_t dashPos = baseName.find('-');
+            if (dashPos != std::string::npos)
+            {
+                baseName = baseName.substr(0, dashPos);
+            }
+
+            for (const auto *baseSpecies : database)
+            {
+                if (baseSpecies->internalID <= 1025 && baseSpecies->name == baseName)
+                {
+                    species->pokedexID = baseSpecies->internalID;
+                    break;
+                }
+            }
+        }
+
         species->type1 = tokens[2];
         species->type2 = tokens[3];
         species->hp = safeStoi(tokens[4], 4);
@@ -168,7 +207,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
         species->genus = tokens[27];
         species->flavorText = tokens[29];
 
-        species->spritePath = "sprites/" + to_string(species->pokedexNumber) + ".png";
+        species->spritePath = "assets/sprites/" + to_string(species->internalID) + ".png";
 
         database.push_back(species);
     }
@@ -181,27 +220,10 @@ const SpeciesData *getSpeciesByPokedexNumber(const vector<SpeciesData *> &databa
 {
     for (const auto *species : database)
     {
-        if (species->pokedexNumber == dexNum)
+        if (species->internalID == dexNum || species->pokedexID == dexNum)
         {
             return species;
         }
     }
     return nullptr;
 }
-
-// Whitelisted regional variant forms
-const std::unordered_set<int> ALLOWED_REGIONAL_IDS = {
-    // Alolan
-    10091, 10092, 10100, 10101, 10102, 10103, 10104, 10105, 10106,
-    10107, 10108, 10109, 10110, 10111, 10112, 10113, 10114, 10115,
-
-    // Galarian
-    10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10169,
-    10170, 10171, 10172, 10173, 10174, 10175, 10176, 10177, 10179, 10180,
-
-    // Hisuian
-    10229, 10230, 10231, 10232, 10233, 10234, 10235, 10236, 10237,
-    10238, 10239, 10240, 10241, 10242, 10243, 10244,
-
-    // Paldean
-    10250, 10251, 10252, 10253};
