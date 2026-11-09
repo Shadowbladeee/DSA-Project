@@ -8,6 +8,32 @@
 #ifdef _WIN32
 
 #include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "user32.lib")
+
+void setupConsoleAndFullscreen()
+{
+    SetConsoleOutputCP(CP_UTF8);
+
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+
+    Sleep(200);
+
+    INPUT in[2] = {};
+    in[0].type = INPUT_KEYBOARD;
+    in[0].ki.wVk = VK_F11;
+
+    in[1].type = INPUT_KEYBOARD;
+    in[1].ki.wVk = VK_F11;
+    in[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    SendInput(2, in, sizeof(INPUT));
+}
 
 #endif
 
@@ -115,7 +141,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     }
     else if (action == 4)
     {
-        printPokemonSummary(getPokemonAtPosition(party, slot));
+        printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
     }
 }
 
@@ -205,7 +231,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
     else if (action == 5)
     {
-        printPokemonSummary(getPokemonAtPosition(boxList, slot));
+        printPokemonSummary(getPokemonAtPosition(boxList, slot), true, true);
     }
 }
 
@@ -230,6 +256,7 @@ int main()
 {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    setupConsoleAndFullscreen();
 #endif
 
     string csvFilename = "pokemon_complete.csv";
@@ -265,7 +292,7 @@ int main()
     if (squirtle)
         pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Quirky", true, "2026-11-06");
 
-    printPokemonSummary(getPokemonAtPosition(party, 1));
+    printPokemonSummary(getPokemonAtPosition(party, 2), true, true);
 
     int choice = -1;
     while (choice != 0)

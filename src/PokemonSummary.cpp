@@ -2,6 +2,28 @@
 #include <iostream>
 #include <iomanip>
 #include <cctype>
+#include <string>
+#include <algorithm>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "../include/stb_image.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+
+void setupConsole()
+{
+    SetConsoleOutputCP(CP_UTF8);
+
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+#endif
 
 using namespace std;
 
@@ -51,7 +73,106 @@ string formatAbilities(string abilitiesStr)
     return toTitleCase(abilitiesStr);
 }
 
-void printPokemonSummary(const PokemonNode *pokemon)
+void playPokemonCry(int pokedexID)
+{
+#ifdef _WIN32
+    string cryPath = "assets/cries/" + to_string(pokedexID) + ".wav";
+    PlaySoundA(cryPath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
+#endif
+}
+
+void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int targetBoxHeight)
+{
+    int fullWidth, height, channels;
+    unsigned char *img = stbi_load(filepath.c_str(), &fullWidth, &height, &channels, 4);
+
+    if (!img)
+    {
+        cout << "\033[31m[ERROR] Could not load image: " << filepath << "\033[0m\n";
+        return;
+    }
+
+    int frameWidth = (fullWidth >= 64) ? fullWidth / 2 : fullWidth;
+
+    int minX = frameWidth, maxX = -1;
+    int minY = height, maxY = -1;
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < frameWidth; x++)
+        {
+            int alphaIdx = (y * fullWidth + x) * 4 + 3;
+            if (img[alphaIdx] >= 128)
+            {
+                if (x < minX)
+                    minX = x;
+                if (x > maxX)
+                    maxX = x;
+                if (y < minY)
+                    minY = y;
+                if (y > maxY)
+                    maxY = y;
+            }
+        }
+    }
+
+    if (maxX == -1 || maxY == -1)
+    {
+        cout << "[Empty Sprite]\n";
+        stbi_image_free(img);
+        return;
+    }
+
+    int contentWidth = (maxX - minX) + 1;
+    int contentHeight = (maxY - minY) + 1;
+
+    int autoMarginX = (max)(0, (targetBoxWidth - contentWidth) / 2);
+    int autoMarginY = (max)(0, (targetBoxHeight - contentHeight) / 2);
+
+    int cropMinX = (max)(0, minX - autoMarginX);
+    int cropMaxX = (min)(frameWidth - 1, maxX + autoMarginX);
+    int cropMinY = (max)(0, minY - autoMarginY);
+    int cropMaxY = (min)(height - 1, maxY + autoMarginY);
+
+    if (cropMinY % 2 != 0)
+    {
+        cropMinY = (max)(0, cropMinY - 1);
+    }
+
+    for (int y = cropMinY; y <= cropMaxY; y += 2)
+    {
+        for (int x = cropMinX; x <= cropMaxX; x++)
+        {
+            int topIdx = (y * fullWidth + x) * 4;
+            unsigned char tR = img[topIdx], tG = img[topIdx + 1], tB = img[topIdx + 2], tA = img[topIdx + 3];
+
+            int bR = 0, bG = 0, bB = 0, bA = 0;
+            if (y + 1 <= cropMaxY)
+            {
+                int botIdx = ((y + 1) * fullWidth + x) * 4;
+                bR = img[botIdx];
+                bG = img[botIdx + 1];
+                bB = img[botIdx + 2];
+                bA = img[botIdx + 3];
+            }
+
+            if (tA < 128 && bA < 128)
+            {
+                cout << " ";
+                continue;
+            }
+
+            cout << "\033[38;2;" << (int)tR << ";" << (int)tG << ";" << (int)tB << "m"
+                 << "\033[48;2;" << (int)bR << ";" << (int)bG << ";" << (int)bB << "m"
+                 << "▀\033[0m";
+        }
+        cout << "\n";
+    }
+
+    stbi_image_free(img);
+}
+
+void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSprite)
 {
     if (!pokemon)
     {
@@ -64,6 +185,18 @@ void printPokemonSummary(const PokemonNode *pokemon)
     {
         cout << "[ERROR] Invalid species data.\n";
         return;
+    }
+
+    if (playCry)
+    {
+        playPokemonCry(species->pokedexID);
+    }
+
+    if (showSprite)
+    {
+        string spritePath = "assets/sprites/" + to_string(species->internalID) + ".png";
+        cout << "\n";
+        renderAutoCenteredSprite(spritePath);
     }
 
     cout << "\n====================================================================\n";
