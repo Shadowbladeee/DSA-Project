@@ -2,6 +2,7 @@
 #define PC_SYSTEM_H
 
 #include "DoublyLinkedList.h"
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -18,11 +19,15 @@ struct Box
 
 struct SearchResult
 {
-    int boxNumber; // 1-based
+    int boxNumber;
     std::string boxName;
-    int slot; // 1-based
+    int slot;
     std::string nickname;
     std::string speciesName;
+    std::string type1;
+    std::string type2;
+    int generation = 0;
+    int dexNumber = 0;
 };
 
 class PCSystem
@@ -37,6 +42,10 @@ public:
     int getCurrentBoxIndex() const { return currentBoxIndex; }
     std::string getCurrentBoxName() const { return boxes[currentBoxIndex].name; }
     std::vector<SearchResult> search(const std::string &query);
+    std::vector<SearchResult> searchIf(const std::function<bool(const PokemonNode &)> &pred);
+    std::vector<SearchResult> searchByType(const std::string &type);
+    std::vector<SearchResult> searchByGeneration(int generation);
+    std::vector<SearchResult> searchByDexNumber(int dexNumber);
     int getCurrentBoxCount() const { return boxes[currentBoxIndex].list.getCount(); }
 
     bool switchBox(int boxNumber);

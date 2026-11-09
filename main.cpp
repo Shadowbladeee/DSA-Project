@@ -1,8 +1,17 @@
 #include "include/CSVParser.h"
 #include "include/PCSystem.h"
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
+#include <limits>
+#include <functional>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 using namespace std;
 
@@ -180,25 +189,125 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
 }
 
-void searchPokemonPC(PCSystem &pc, const string &query)
+void printSearchResults(const string &title, const vector<SearchResult> &results)
 {
-    cout << "\n=== SEARCH RESULTS FOR \"" << query << "\" ===" << endl;
-    vector<SearchResult> results = pc.search(query);
-
+    cout << "\n=== " << title << " ===" << endl;
     if (results.empty())
     {
-        cout << "(No Pokémon found matching \"" << query << "\")" << endl;
+        cout << "(No matches)" << endl;
         return;
     }
     for (const auto &r : results)
     {
         cout << "Box " << r.boxNumber << " (" << r.boxName << ") Slot " << r.slot
-             << ": " << r.nickname << " (" << r.speciesName << ")" << endl;
+             << ": " << r.nickname << " (#" << setfill('0') << setw(3) << r.dexNumber
+             << setfill(' ') << " " << r.speciesName << ") ["
+             << r.type1 << (r.type2.empty() ? "" : "/" + r.type2) << "] Gen "
+             << r.generation << endl;
     }
+    cout << results.size() << " found." << endl;
+}
+
+const vector<string> POKEMON_TYPES = {
+    "Normal", "Fire", "Water", "Electric", "Grass", "Ice",
+    "Fighting", "Poison", "Ground", "Flying", "Psychic", "Bug",
+    "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy"};
+
+string chooseType()
+{
+    cout << "\n--- SELECT TYPE ---" << endl;
+    for (size_t i = 0; i < POKEMON_TYPES.size(); ++i)
+    {
+        cout << right << setw(2) << (i + 1) << ". "
+             << left << setw(10) << POKEMON_TYPES[i];
+        if ((i + 1) % 3 == 0)
+            cout << endl;
+    }
+    cout << " 0. Cancel" << endl;
+    cout << "Choice: ";
+
+    int pick = 0;
+    if (!(cin >> pick))
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "[ERROR] Invalid input." << endl;
+        return "";
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    if (pick == 0)
+        return "";
+    if (pick < 1 || pick > static_cast<int>(POKEMON_TYPES.size()))
+    {
+        cout << "[ERROR] Invalid type number." << endl;
+        return "";
+    }
+    return POKEMON_TYPES[pick - 1];
+}
+
+const vector<string> GENERATION_LABELS = {
+    "Gen 1 (Kanto)", "Gen 2 (Johto)", "Gen 3 (Hoenn)",
+    "Gen 4 (Sinnoh)", "Gen 5 (Unova)", "Gen 6 (Kalos)",
+    "Gen 7 (Alola)", "Gen 8 (Galar + Hisui)", "Gen 9 (Paldea)"};
+
+int chooseGeneration()
+{
+    cout << "\n--- SELECT GENERATION ---" << endl;
+    for (size_t i = 0; i < GENERATION_LABELS.size(); ++i)
+    {
+        cout << (i + 1) << ". " << GENERATION_LABELS[i] << endl;
+    }
+    cout << "0. Cancel" << endl;
+    cout << "Choice: ";
+
+    int pick = 0;
+    if (!(cin >> pick))
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "[ERROR] Invalid input." << endl;
+        return 0;
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    if (pick < 1 || pick > static_cast<int>(GENERATION_LABELS.size()))
+    {
+        if (pick != 0)
+            cout << "[ERROR] Invalid generation number." << endl;
+        return 0;
+    }
+    return pick;
+}
+
+int promptDexNumber()
+{
+    cout << "Enter Dex number (0 to cancel): ";
+
+    int dex = 0;
+    if (!(cin >> dex))
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "[ERROR] Please enter a number." << endl;
+        return 0;
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    if (dex < 0)
+    {
+        cout << "[ERROR] Dex number must be positive." << endl;
+        return 0;
+    }
+    return dex;
 }
 
 int main()
 {
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    #endif
+
     string csvFilename = "pokemon_complete.csv";
     if (!checkCSVFile(csvFilename))
     {
@@ -231,6 +340,10 @@ int main()
     const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
     if (squirtle)
         pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Torrent", true, "2026-11-06");
+    
+    const SpeciesData *marshtomp = getSpeciesByPokedexNumber(pokedex, 259);
+    if (marshtomp)
+        pc.getCurrentList().append(marshtomp, "mudkip", "Male", 16, "Torrent", "Damp", false, "2026-11-06");
 
     int choice = -1;
     while (choice != 0)
@@ -303,11 +416,54 @@ int main()
             }
             else if (choice == 4)
             {
-            string searchQuery;
-            cout << "Enter Pokémon nickname or species to search: ";
-            cin.ignore();
-            getline(cin, searchQuery);
-            searchPokemonPC(pc, searchQuery);
+                cout << "\n--- SEARCH PC ---" << endl;
+                cout << "1. By nickname / species" << endl;
+                cout << "2. By type" << endl;
+                cout << "3. By generation" << endl;
+                cout << "4. By Dex number" << endl;
+                cout << "0. Back" << endl;
+                cout << "Choice: ";
+                int sub = 0;
+                if (!(cin >> sub))
+                {
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                    continue;
+                }
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+                string query;
+                if (sub == 1)
+                {
+                    cout << "Enter nickname or species: ";
+                    getline(cin, query);
+                    printSearchResults("SEARCH: \"" + query + "\"", pc.search(query));
+                }
+                else if (sub == 2)
+                {
+                    string type = chooseType();
+                    if (!type.empty())
+                    {
+                        printSearchResults("TYPE: " + type, pc.searchByType(type));
+                    }
+                }
+                else if (sub == 3)
+                {
+                    int gen = chooseGeneration();
+                    if (gen != 0)
+                    {
+                        printSearchResults("GENERATION: " + GENERATION_LABELS[gen - 1],
+                                        pc.searchByGeneration(gen));
+                    }
+                }
+                else if (sub == 4)
+                {
+                    int dex = promptDexNumber();
+                    if (dex != 0)
+                    {
+                        printSearchResults("DEX #" + to_string(dex), pc.searchByDexNumber(dex));
+                    }
+                }
             }
         }
         else
