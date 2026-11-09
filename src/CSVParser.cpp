@@ -119,7 +119,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
     }
 
     string line;
-    getline(file, line); // Skips header
+    getline(file, line);
 
     while (getline(file, line))
     {
