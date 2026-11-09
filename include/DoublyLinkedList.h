@@ -4,6 +4,9 @@
 #include "PokemonNode.h"
 #include "Species.h"
 #include <string>
+#include <functional>
+
+using NodeLess = std::function<bool(const PokemonNode &, const PokemonNode &)>;
 
 class DoublyLinkedList
 {
@@ -16,6 +19,8 @@ private:
 public:
     DoublyLinkedList();
     ~DoublyLinkedList();
+    DoublyLinkedList(const DoublyLinkedList &) = delete;
+    DoublyLinkedList &operator=(const DoublyLinkedList &) = delete;
 
     void append(const SpeciesData *species, std::string nick, std::string gndr,
                 int lvl, std::string nat, std::string abil,
@@ -34,6 +39,11 @@ public:
     PokemonNode *removeByPosition(int position);
 
     bool releaseByPosition(int position);
+
+    void sort(const NodeLess &less);
+
+    static PokemonNode *mergeLists(PokemonNode *a, PokemonNode *b, const NodeLess &less);
+    static PokemonNode *mergeSortRec(PokemonNode *h, const NodeLess &less);
 };
 
 #endif

@@ -6,6 +6,8 @@
 #include <vector>
 #include <limits>
 #include <functional>
+#include <algorithm>
+#include <cctype>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -303,6 +305,179 @@ int promptDexNumber()
     return dex;
 }
 
+string toLowerStr(string s)
+{
+    transform(s.begin(), s.end(), s.begin(),
+              [](unsigned char c) { return tolower(c); });
+    return s;
+}
+
+int readChoice()
+{
+    int v = 0;
+    if (!(cin >> v))
+    {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        return -1;
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return v;
+}
+
+int chooseSecondType()
+{
+    cout << "\n--- SELECT TYPE 2 ---" << endl;
+
+    vector<string> options = POKEMON_TYPES;
+    options.push_back("Any");
+    options.push_back("Mono");
+
+    for (size_t i = 0; i < options.size(); ++i)
+    {
+        cout << right << setw(2) << (i + 1) << ". "
+             << left << setw(10) << options[i];
+        if ((i + 1) % 3 == 0)
+            cout << endl;
+    }
+    cout << right << endl;
+    cout << "(Any = any second type, Mono = single-type only)" << endl;
+    cout << " 0. Cancel" << endl;
+    cout << "Choice: ";
+
+    int pick = readChoice();
+    if (pick == -1)
+    {
+        cout << "[ERROR] Invalid input." << endl;
+        return 0;
+    }
+    if (pick < 0 || pick > static_cast<int>(options.size()))
+    {
+        cout << "[ERROR] Invalid choice." << endl;
+        return 0;
+    }
+    return pick;
+}
+
+// Species name, A-Z (case-insensitive); ties broken by nickname
+bool nameLess(const PokemonNode &a, const PokemonNode &b)
+{
+    string na = toLowerStr(a.species ? a.species->name : "");
+    string nb = toLowerStr(b.species ? b.species->name : "");
+    if (na != nb)
+        return na < nb;
+    return toLowerStr(a.nickname) < toLowerStr(b.nickname);
+}
+
+bool dexLess(const PokemonNode &a, const PokemonNode &b)
+{
+    int da = a.species ? a.species->pokedexNumber : 0;
+    int db = b.species ? b.species->pokedexNumber : 0;
+    if (da != db)
+        return da < db;
+    return toLowerStr(a.nickname) < toLowerStr(b.nickname);
+}
+
+int typeRank(const string &type)
+{
+    const string t = toLowerStr(type);
+    for (size_t i = 0; i < POKEMON_TYPES.size(); ++i)
+    {
+        if (toLowerStr(POKEMON_TYPES[i]) == t)
+            return static_cast<int>(i);
+    }
+    return static_cast<int>(POKEMON_TYPES.size());
+}
+
+NodeLess typeOrder(bool descending)
+{
+    return [descending](const PokemonNode &a, const PokemonNode &b) {
+        int ra = typeRank(a.species ? a.species->type1 : "");
+        int rb = typeRank(b.species ? b.species->type1 : "");
+        if (ra != rb)
+            return descending ? (ra > rb) : (ra < rb);
+        return dexLess(a, b);
+    };
+}
+
+void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
+{
+    cout << "\n--- SORT ---" << endl;
+    cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
+    cout << "2. Party" << endl;
+    cout << "0. Back" << endl;
+    cout << "Choice: ";
+    int target = readChoice();
+    if (target != 1 && target != 2)
+        return;
+
+    DoublyLinkedList &list = (target == 1) ? pc.getCurrentList() : party;
+    if (list.getCount() < 2)
+    {
+        cout << "[ERROR] Need at least 2 Pokémon to sort." << endl;
+        return;
+    }
+
+    cout << "\n--- SORT BY ---" << endl;
+    cout << "1. Name" << endl;
+    cout << "2. Type" << endl;
+    cout << "3. Dex Number" << endl;
+    cout << "0. Back" << endl;
+    cout << "Choice: ";
+    int field = readChoice();
+
+    if (field == 1)
+    {
+        cout << "\n1. Ascending (A-Z)" << endl;
+        cout << "2. Descending (Z-A)" << endl;
+        cout << "Choice: ";
+        int dir = readChoice();
+        if (dir != 1 && dir != 2)
+            return;
+
+        if (dir == 1)
+            list.sort(nameLess);
+        else
+            list.sort([](const PokemonNode &a, const PokemonNode &b) { return nameLess(b, a); });
+
+        cout << "[SUCCESS] Sorted by name." << endl;
+        list.displayBox();
+    }
+    else if (field == 2)
+    {
+        cout << "\n1. Ascending (Normal -> Fairy)" << endl;
+        cout << "2. Descending (Fairy -> Normal)" << endl;
+        cout << "Choice: ";
+        int dir = readChoice();
+        if (dir != 1 && dir != 2)
+            return;
+
+        list.sort(typeOrder(dir == 2));
+
+        cout << "[SUCCESS] Sorted by type ("
+             << (dir == 1 ? "ascending" : "descending") << ")." << endl;
+        list.displayBox();
+    }
+    else if (field == 3)
+    {
+        cout << "\n1. Ascending (low -> high)" << endl;
+        cout << "2. Descending (high -> low)" << endl;
+        cout << "Choice: ";
+        int dir = readChoice();
+        if (dir != 1 && dir != 2)
+            return;
+
+        if (dir == 1)
+            list.sort(dexLess);
+        else
+            list.sort([](const PokemonNode &a, const PokemonNode &b) { return dexLess(b, a); });
+
+        cout << "[SUCCESS] Sorted by Dex number ("
+             << (dir == 1 ? "ascending" : "descending") << ")." << endl;
+        list.displayBox();
+    }
+}
+
 int main()
 {
     #ifdef _WIN32
@@ -345,6 +520,18 @@ int main()
     const SpeciesData *marshtomp = getSpeciesByPokedexNumber(pokedex, 259);
     if (marshtomp)
         pc.getCurrentList().append(marshtomp, "mudkip", "Male", 16, "Torrent", "Damp", false, "2026-11-06");
+    
+    const SpeciesData *garchomp = getSpeciesByPokedexNumber(pokedex, 445);
+    if (garchomp)
+        pc.getCurrentList().append(garchomp, "garchomp", "Male", 50, "Rough Skin", "Jolly", false, "2026-11-06");
+
+    const SpeciesData *gardevoir = getSpeciesByPokedexNumber(pokedex, 282);
+    if (gardevoir)
+        pc.getCurrentList().append(gardevoir, "gardevoir", "Female", 50, "Synchronize", "Trace", false, "2026-11-06");
+
+    const SpeciesData *Ursaring = getSpeciesByPokedexNumber(pokedex, 217);
+    if (Ursaring)
+        pc.getCurrentList().append(Ursaring, "ursaring", "Male", 50, "Guts", "Quick Feet", false, "2026-11-06");
 
     int choice = -1;
     while (choice != 0)
@@ -355,6 +542,7 @@ int main()
         cout << "2. Manage Active Box (" << pc.getCurrentBoxCount() << "/" << BOX_CAPACITY << ")" << endl;
         cout << "3. Box Settings (Switch / Rename / Overview)" << endl;
         cout << "4. Search Pokémon in PC" << endl;
+        cout << "5. Sort Pokémon" << endl;
         cout << "0. Exit" << endl;
         cout << "Select option: ";
 
@@ -442,10 +630,29 @@ int main()
                 }
                 else if (sub == 2)
                 {
-                    string type = chooseType();
-                    if (!type.empty())
+                    string type1 = chooseType();
+                    if (!type1.empty())
                     {
-                        printSearchResults("TYPE: " + type, pc.searchByType(type));
+                        int second = chooseSecondType();
+                        if (second >= 1 && second <= 18)
+                        {
+                            string type2 = POKEMON_TYPES[second - 1];
+                            if (toLowerStr(type2) == toLowerStr(type1))
+                                cout << "[ERROR] Type 2 must be different from Type 1." << endl;
+                            else
+                                printSearchResults("TYPE: " + type1 + "/" + type2 + " (either order)",
+                                                   pc.searchByTypePair(type1, type2));
+                        }
+                        else if (second == 19)
+                        {
+                            printSearchResults("TYPE: " + type1 + " (any second type)",
+                                               pc.searchByType(type1));
+                        }
+                        else if (second == 20)
+                        {
+                            printSearchResults("TYPE: " + type1 + " (single-type only)",
+                                               pc.searchByMonoType(type1));
+                        }
                     }
                 }
                 else if (sub == 3)
@@ -457,7 +664,7 @@ int main()
                                         pc.searchByGeneration(gen));
                     }
                 }
-                else if (sub == 4)
+                                else if (sub == 4)
                 {
                     int dex = promptDexNumber();
                     if (dex != 0)
@@ -465,6 +672,10 @@ int main()
                         printSearchResults("DEX #" + to_string(dex), pc.searchByDexNumber(dex));
                     }
                 }
+            }
+            else if (choice == 5)
+            {
+                handleSortMenu(pc, party);
             }
         }
         else

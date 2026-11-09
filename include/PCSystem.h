@@ -44,6 +44,8 @@ public:
     std::vector<SearchResult> search(const std::string &query);
     std::vector<SearchResult> searchIf(const std::function<bool(const PokemonNode &)> &pred);
     std::vector<SearchResult> searchByType(const std::string &type);
+    std::vector<SearchResult> searchByTypePair(const std::string &type1, const std::string &type2);
+    std::vector<SearchResult> searchByMonoType(const std::string &type);
     std::vector<SearchResult> searchByGeneration(int generation);
     std::vector<SearchResult> searchByDexNumber(int dexNumber);
     int getCurrentBoxCount() const { return boxes[currentBoxIndex].list.getCount(); }
