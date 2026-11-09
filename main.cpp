@@ -26,6 +26,18 @@ void displayParty(const DoublyLinkedList &party)
     party.displayBox();
 }
 
+PokemonNode *getPokemonAtPosition(const DoublyLinkedList &list, int position)
+{
+    if (position < 1 || position > list.getCount())
+        return nullptr;
+
+    PokemonNode *pokemon = list.getHead();
+    for (int currentPosition = 1; currentPosition < position; currentPosition++)
+        pokemon = pokemon->next;
+
+    return pokemon;
+}
+
 void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
 {
     if (slot < 1 || slot > party.getCount())
@@ -38,6 +50,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     cout << "1. Deposit to Active Box [" << pc.getCurrentBoxName() << "]" << endl;
     cout << "2. Swap Position in Party" << endl;
     cout << "3. Release Pokémon" << endl;
+    cout << "4. View Pokémon Summary" << endl;
     cout << "0. Cancel" << endl;
     cout << "Choice: ";
 
@@ -100,6 +113,10 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             cout << "[ERROR] Failed to release Pokémon." << endl;
         }
     }
+    else if (action == 4)
+    {
+        printPokemonSummary(getPokemonAtPosition(party, slot));
+    }
 }
 
 void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
@@ -116,6 +133,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     cout << "2. Swap Position in Box" << endl;
     cout << "3. Move to another Box" << endl;
     cout << "4. Release Pokémon" << endl;
+    cout << "5. View Pokémon Summary" << endl;
     cout << "0. Cancel" << endl;
     cout << "Choice: ";
 
@@ -185,6 +203,10 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             cout << "[ERROR] Failed to release Pokémon." << endl;
         }
     }
+    else if (action == 5)
+    {
+        printPokemonSummary(getPokemonAtPosition(boxList, slot));
+    }
 }
 
 void searchPokemonPC(PCSystem &pc, const string &query)
@@ -229,25 +251,21 @@ int main()
 
     const SpeciesData *starter = getSpeciesByPokedexNumber(pokedex, 1);
     if (starter)
-        party.append(starter, "Neil", "Male", 19, "Overgrow", "Overgrow", false, "2026-11-06");
+        party.append(starter, "Neil", "Male", 19, "Overgrow", "Quirky", false, "2026-11-06");
 
     const SpeciesData *pidgey = getSpeciesByPokedexNumber(pokedex, 16);
     if (pidgey)
-        party.append(pidgey, "the biggest bird", "Female", 3, "Keen Eye", "Keen Eye", false, "2026-11-06");
+        party.append(pidgey, "the biggest bird", "Female", 3, "Keen Eye", "Quirky", false, "2026-11-06");
 
     const SpeciesData *charmander = getSpeciesByPokedexNumber(pokedex, 4);
     if (charmander)
-        party.append(charmander, "fire", "Male", 5, "Blaze", "Blaze", false, "2026-11-06");
+        party.append(charmander, "fire", "Male", 5, "Blaze", "Quirky", false, "2026-11-06");
 
     const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
     if (squirtle)
-        pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Torrent", true, "2026-11-06");
+        pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Quirky", true, "2026-11-06");
 
-    int testDexNum = 10091;
-
-    const SpeciesData *target = getSpeciesByPokedexNumber(pokedex, testDexNum);
-
-    printPokemonSummary(target);
+    printPokemonSummary(getPokemonAtPosition(party, 1));
 
     int choice = -1;
     while (choice != 0)
