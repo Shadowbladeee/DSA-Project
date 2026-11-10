@@ -415,10 +415,26 @@ int readChoice()
 
 bool askYesNo(const string &prompt)
 {
-    cout << prompt << " (y/n): ";
     string answer;
-    getline(cin, answer);
-    return !answer.empty() && (answer[0] == 'y' || answer[0] == 'Y');
+    while (true)
+    {
+        cout << prompt << " (y/n): ";
+        if (!getline(cin, answer))
+            return false;
+
+        size_t start = answer.find_first_not_of(" \t");
+        size_t end = answer.find_last_not_of(" \t");
+        string normalized = (start == string::npos)
+                               ? ""
+                               : toLowerStr(answer.substr(start, end - start + 1));
+
+        if (normalized == "y" || normalized == "yes")
+            return true;
+        if (normalized == "n" || normalized == "no")
+            return false;
+
+        cout << "[ERROR] Please type y or n." << endl;
+    }
 }
 
 void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesData *> &pokedex)
@@ -608,8 +624,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     }
 }
 
-void viewPCMenu(PCSystem &pc, DoublyLinkedList &party,
-                const vector<SpeciesData *> &pokedex)
+void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
 {
     int choice = -1;
     while (choice != 0)
@@ -621,7 +636,6 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party,
         cout << "3. Box Settings (Switch / Rename / Overview)" << endl;
         cout << "4. Search Pokémon in PC" << endl;
         cout << "5. Sort Pokémon" << endl;
-        cout << "6. Save / Load" << endl;
         cout << "0. Back" << endl;
         cout << "Select option: ";
 
@@ -749,10 +763,6 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party,
             {
                 handleSortMenu(pc, party);
             }
-            else if (choice == 6)
-            {
-                handleSaveMenu(pc, party, pokedex);
-            }
             else if (choice != 0)
             {
                 cout << "[ERROR] Invalid choice." << endl;
@@ -831,8 +841,12 @@ int main()
             const SpeciesData *ursaring = getSpeciesByPokedexNumber(pokedex, 217);
             if (ursaring)
                 pc.getCurrentList().append(ursaring, "ursaring", "Male", 50, "Guts", "Quick Feet", false, "2026-11-06");
+        
+            const SpeciesData *meowth = getSpeciesByPokedexNumber(pokedex, 52);
+            if (meowth)
+                pc.getCurrentList().append(meowth, "meowth", "Male", 50, "Pickup", "Technician", false, "2026-11-06");
         }
-
+        
         int choice = -1;
         while (choice != 0)
         {
@@ -840,13 +854,14 @@ int main()
             cout << "1. Start an Expedition" << endl;
             cout << "2. View PC" << endl;
             cout << "3. View Party" << endl;
+            cout << "4. Save / Load" << endl;
             cout << "0. Exit" << endl;
             cout << "Select option: ";
 
             choice = readChoice();
             if (choice == -1)
             {
-                cout << "[ERROR] Enter 1, 2, or 0." << endl;
+                cout << "[ERROR] Enter 1, 2, 3, 4, or 0." << endl;
                 continue;
             }
 
@@ -856,15 +871,19 @@ int main()
             }
             else if (choice == 2)
             {
-                viewPCMenu(pc, party, pokedex);
+                viewPCMenu(pc, party);
             }
             else if (choice == 3)
             {
                 displayParty(party);
             }
+            else if (choice == 4)
+            {
+                handleSaveMenu(pc, party, pokedex);
+            }
             else if (choice != 0)
             {
-                cout << "[ERROR] Enter 1, 2, 3, or 0." << endl;
+                cout << "[ERROR] Enter 1, 2, 3, 4, or 0." << endl;
             }
         }
 
