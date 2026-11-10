@@ -384,9 +384,8 @@ void searchPokedex(const vector<SpeciesData *> &pokedex,
     cout << "1. By nickname / species" << endl;
     cout << "2. By type" << endl;
     cout << "3. By generation" << endl;
-    cout << "4. By Dex number" << endl;
     cout << "0. Back" << endl;
-    const int choice = readMenuChoice("Choice: ", 4);
+    const int choice = readMenuChoice("Choice: ", 3);
     if (choice == 0)
         return;
 
@@ -469,19 +468,6 @@ void searchPokedex(const vector<SpeciesData *> &pokedex,
                 matches.push_back(species);
         }
     }
-    else
-    {
-        const int dexNumber = promptPokedexNumber();
-        if (dexNumber == 0)
-            return;
-        title = "POKÉDEX DEX #" + to_string(dexNumber);
-        for (const SpeciesData *species : entries)
-        {
-            if (species->pokedexID == dexNumber)
-                matches.push_back(species);
-        }
-    }
-
     browsePokedexEntries(std::move(matches), pokedex, registeredSpecies,
                          encounteredSpecies, title);
 }

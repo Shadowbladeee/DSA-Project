@@ -114,10 +114,10 @@ int main()
             clearScreen();
             cout << "\n=== POKEMON ADVENTURE ===" << endl;
             cout << "1. Start an Expedition" << endl;
-            cout << "2. View PC" << endl;
-            cout << "3. View Party" << endl;
-            cout << "4. Save / Load" << endl;
-            cout << "5. Pokédex" << endl;
+            cout << "2. View Party" << endl;
+            cout << "3. View PC" << endl;
+            cout << "4. Pokédex" << endl;
+            cout << "5. Save / Load" << endl;
             cout << "0. Exit" << endl;
             choice = readMenuChoice("Select option: ", 5);
 
@@ -127,20 +127,19 @@ int main()
             }
             else if (choice == 2)
             {
-                viewPCMenu(pc, party);
+                managePartyOutsideBox(party, pc);
             }
             else if (choice == 3)
             {
-                displayParty(party);
-                waitForContinue();
+                viewPCMenu(pc, party);
             }
             else if (choice == 4)
             {
-                handleSaveMenu(pc, party, pokedex, registeredSpecies, encounteredSpecies);
+                handlePokedexMenu(pokedex, registeredSpecies, encounteredSpecies);
             }
             else if (choice == 5)
             {
-                handlePokedexMenu(pokedex, registeredSpecies, encounteredSpecies);
+                handleSaveMenu(pc, party, pokedex, registeredSpecies, encounteredSpecies);
             }
         }
 

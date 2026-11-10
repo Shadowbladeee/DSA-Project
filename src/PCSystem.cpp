@@ -96,6 +96,7 @@ bool PCSystem::moveBetweenBoxesByPosition(int sourceBox, int targetBox, int slot
         return false;
 
     boxes[tgtIdx].list.insertNode(moved);
+    currentBoxIndex = tgtIdx;
     return true;
 }
 

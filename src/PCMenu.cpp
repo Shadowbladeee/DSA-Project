@@ -72,98 +72,190 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         return;
     }
 
-    clearScreen();
-    cout << "\n--- PARTY SLOT " << slot << " ACTIONS ---" << endl;
-    cout << "1. Deposit to Active Box [" << pc.getCurrentBoxName() << "]" << endl;
-    cout << "2. Swap Position in Party" << endl;
-    cout << "3. Release Pokémon" << endl;
-    cout << "4. View Pokémon Summary" << endl;
-    cout << "5. Change Nickname" << endl;
-    cout << "0. Cancel" << endl;
-    int action = readMenuChoice("Choice: ", 5);
-    if (action == 0)
-        return;
-
-    if (action == 1)
+    while (true)
     {
-        if (party.getCount() <= 1)
-        {
-            cout << "[ERROR] Minimum 1 Pokémon required in party!" << endl;
-            waitForContinue();
-            return;
-        }
-        if (pc.getCurrentBoxCount() >= BOX_CAPACITY)
-        {
-            cout << "[ERROR] Active box is full!" << endl;
-            waitForContinue();
-            return;
-        }
+        clearScreen();
+        cout << "\n--- PARTY SLOT " << slot << " ACTIONS ---" << endl;
+        cout << "1. Deposit to Active Box [" << pc.getCurrentBoxName() << "]" << endl;
+        cout << "2. Swap Position in Party" << endl;
+        cout << "3. Change Nickname" << endl;
+        cout << "4. View Pokédex Entry" << endl;
+        cout << "5. Release Pokémon" << endl;
+        cout << "0. Cancel" << endl;
+        int action = readMenuChoice("Choice: ", 5);
+        if (action == 0)
+            break;
 
-        PokemonNode *moved = party.removeByPosition(slot);
-        if (moved)
+        bool shouldReturn = false;
+        if (action == 1)
         {
-            pc.getCurrentList().insertNode(moved);
-            cout << "[SUCCESS] Deposited " << moved->nickname << " into [" << pc.getCurrentBoxName() << "]." << endl;
+            if (party.getCount() <= 1)
+            {
+                cout << "[ERROR] Minimum 1 Pokémon required in party!" << endl;
+                waitForContinue();
+                continue;
+            }
+            if (pc.getCurrentBoxCount() >= BOX_CAPACITY)
+            {
+                cout << "[ERROR] Active box is full!" << endl;
+                waitForContinue();
+                continue;
+            }
+
+            PokemonNode *moved = party.removeByPosition(slot);
+            if (moved)
+            {
+                pc.getCurrentList().insertNode(moved);
+                cout << "[SUCCESS] Deposited " << moved->nickname << " into [" << pc.getCurrentBoxName() << "]." << endl;
+                shouldReturn = true;
+            }
         }
-    }
-    else if (action == 2)
-    {
-        if (party.getCount() < 2)
+        else if (action == 2)
         {
-            cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
-            waitForContinue();
-            return;
+            if (party.getCount() < 2)
+            {
+                cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
+                waitForContinue();
+                continue;
+            }
+            int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+                                           party.getCount());
+            if (targetPos == 0)
+                continue;
+            if (party.swapNodes(slot, targetPos))
+            {
+                cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
+                shouldReturn = true;
+            }
+            else
+            {
+                cout << "[ERROR] Invalid target position." << endl;
+            }
         }
-        int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
-                                       party.getCount());
-        if (targetPos == 0)
-            return;
-        if (party.swapNodes(slot, targetPos))
+        else if (action == 3)
         {
-            cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
+            changePokemonNickname(getPokemonAtPosition(party, slot));
+        }
+        else if (action == 4)
+        {
+            printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
+            continue;
+        }
+        else if (action == 5)
+        {
+            if (party.getCount() <= 1)
+            {
+                cout << "[ERROR] Cannot release your last Pokémon!" << endl;
+                waitForContinue();
+                continue;
+            }
+
+            const PokemonNode *p = nodeAt(party, slot);
+            if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
+            {
+                cout << "Release cancelled." << endl;
+                waitForContinue();
+                continue;
+            }
+
+            if (party.releaseByPosition(slot))
+            {
+                cout << "[SUCCESS] Released Pokémon at slot " << slot << "." << endl;
+            }
+            else
+            {
+                cout << "[ERROR] Failed to release Pokémon." << endl;
+            }
         }
         else
         {
-            cout << "[ERROR] Invalid target position." << endl;
-        }
-    }
-    else if (action == 3)
-    {
-        if (party.getCount() <= 1)
-        {
-            cout << "[ERROR] Cannot release your last Pokémon!" << endl;
+            cout << "[ERROR] Invalid Choice." << endl;
             waitForContinue();
-            return;
+            continue;
         }
 
-        const PokemonNode *p = nodeAt(party, slot);
-        if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
-        {
-            cout << "Release cancelled." << endl;
-            waitForContinue();
-            return;
-        }
-
-        if (party.releaseByPosition(slot))
-        {
-            cout << "[SUCCESS] Released Pokémon at slot " << slot << "." << endl;
-        }
-        else
-        {
-            cout << "[ERROR] Failed to release Pokémon." << endl;
-        }
-    }
-    else if (action == 4)
-    {
-        printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
-    }
-    else if (action == 5)
-    {
-        changePokemonNickname(getPokemonAtPosition(party, slot));
-    }
-
-    if (action != 4)
+        if (shouldReturn)
+            break;
         waitForContinue();
+    }
+}
+
+void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &pc)
+{
+    while (true)
+    {
+        displayParty(party);
+        if (party.isEmpty())
+        {
+            waitForContinue();
+            return;
+        }
+
+        int slot = readMenuChoice("Select Slot # to manage (0 to go back): ", party.getCount());
+        if (slot == 0)
+            return;
+
+        while (true)
+        {
+            clearScreen();
+            cout << "\n--- PARTY SLOT " << slot << " ACTIONS ---" << endl;
+            cout << "1. Swap Position in Party" << endl;
+            cout << "2. Change Nickname" << endl;
+            cout << "3. View Pokédex Entry" << endl;
+            cout << "0. Cancel" << endl;
+            int action = readMenuChoice("Choice: ", 3);
+            if (action == 0)
+                break;
+
+            bool shouldReturnToColumns = false;
+            if (action == 1)
+            {
+                if (party.getCount() < 2)
+                {
+                    cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
+                    waitForContinue();
+                    continue;
+                }
+                int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+                                               party.getCount());
+                if (targetPos == 0)
+                    continue;
+                if (party.swapNodes(slot, targetPos))
+                {
+                    cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
+                    shouldReturnToColumns = true;
+                }
+                else
+                {
+                    cout << "[ERROR] Invalid target position." << endl;
+                }
+            }
+            else if (action == 2)
+            {
+                changePokemonNickname(getPokemonAtPosition(party, slot));
+            }
+            else if (action == 3)
+            {
+                printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
+                continue;
+            }
+            else
+            {
+                cout << "[ERROR] Invalid Choice." << endl;
+                waitForContinue();
+                continue;
+            }
+
+            if (shouldReturnToColumns)
+                break;
+            waitForContinue();
+        }
+    }
+}
+
+void handlePartySubMenuOutsideBox(DoublyLinkedList &party, PCSystem &pc)
+{
+    managePartyOutsideBox(party, pc);
 }
 
 void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
@@ -176,106 +268,121 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         return;
     }
 
-    clearScreen();
-    cout << "\n--- BOX SLOT " << slot << " ACTIONS ---" << endl;
-    cout << "1. Withdraw to Party" << endl;
-    cout << "2. Swap Position in Box" << endl;
-    cout << "3. Move to another Box" << endl;
-    cout << "4. Release Pokémon" << endl;
-    cout << "5. View Pokémon Summary" << endl;
-    cout << "6. Change Nickname" << endl;
-    cout << "0. Cancel" << endl;
-    int action = readMenuChoice("Choice: ", 6);
-    if (action == 0)
-        return;
-
-    if (action == 1)
+    while (true)
     {
-        if (party.getCount() >= MAX_PARTY_SIZE)
-        {
-            cout << "[ERROR] Party is full!" << endl;
-            waitForContinue();
-            return;
-        }
+        clearScreen();
+        cout << "\n--- BOX SLOT " << slot << " ACTIONS ---" << endl;
+        cout << "1. Withdraw to Party" << endl;
+        cout << "2. Swap Position in Box" << endl;
+        cout << "3. Move to another Box" << endl;
+        cout << "4. Change Nickname" << endl;
+        cout << "5. View Pokédex Entry" << endl;
+        cout << "6. Release Pokémon" << endl;
+        cout << "0. Cancel" << endl;
+        int action = readMenuChoice("Choice: ", 6);
+        if (action == 0)
+            break;
 
-        PokemonNode *moved = boxList.removeByPosition(slot);
-        if (moved)
+        bool shouldReturn = false;
+        if (action == 1)
         {
-            party.insertNode(moved);
-            cout << "[SUCCESS] Withdrew " << moved->nickname << " to party." << endl;
+            if (party.getCount() >= MAX_PARTY_SIZE)
+            {
+                cout << "[ERROR] Party is full!" << endl;
+                waitForContinue();
+                continue;
+            }
+
+            PokemonNode *moved = boxList.removeByPosition(slot);
+            if (moved)
+            {
+                party.insertNode(moved);
+                cout << "[SUCCESS] Withdrew " << moved->nickname << " to party." << endl;
+                shouldReturn = true;
+            }
         }
-    }
-    else if (action == 2)
-    {
-        if (boxList.getCount() < 2)
+        else if (action == 2)
         {
-            cout << "[ERROR] Need at least 2 Pokémon in box to swap!" << endl;
-            waitForContinue();
-            return;
+            if (boxList.getCount() < 2)
+            {
+                cout << "[ERROR] Need at least 2 Pokémon in box to swap!" << endl;
+                waitForContinue();
+                continue;
+            }
+            int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+                                           boxList.getCount());
+            if (targetPos == 0)
+                continue;
+            if (boxList.swapNodes(slot, targetPos))
+            {
+                cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
+                shouldReturn = true;
+            }
+            else
+            {
+                cout << "[ERROR] Invalid target position." << endl;
+            }
         }
-        int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
-                                       boxList.getCount());
-        if (targetPos == 0)
-            return;
-        if (boxList.swapNodes(slot, targetPos))
+        else if (action == 3)
         {
-            cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
+            int targetBox = readMenuChoice("Enter Target Box (1-30): ", MAX_BOXES, false);
+            int srcBox = pc.getCurrentBoxNumber();
+            if (targetBox == srcBox)
+            {
+                cout << "[ERROR] That is already the active box." << endl;
+                waitForContinue();
+                continue;
+            }
+
+            if (pc.moveBetweenBoxesByPosition(srcBox, targetBox, slot))
+            {
+                cout << "[SUCCESS] Moved slot " << slot << " to Box " << targetBox << "." << endl;
+                shouldReturn = true;
+            }
+            else
+            {
+                cout << "[ERROR] Transfer failed (check box number or target capacity)." << endl;
+            }
+        }
+        else if (action == 4)
+        {
+            changePokemonNickname(getPokemonAtPosition(boxList, slot));
+        }
+        else if (action == 5)
+        {
+            printPokemonSummary(getPokemonAtPosition(boxList, slot), true, true);
+            continue;
+        }
+        else if (action == 6)
+        {
+            const PokemonNode *p = nodeAt(boxList, slot);
+            if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
+            {
+                cout << "Release cancelled." << endl;
+                waitForContinue();
+                continue;
+            }
+
+            if (boxList.releaseByPosition(slot))
+            {
+                cout << "[SUCCESS] Released Pokémon at slot " << slot << "." << endl;
+            }
+            else
+            {
+                cout << "[ERROR] Failed to release Pokémon." << endl;
+            }
         }
         else
         {
-            cout << "[ERROR] Invalid target position." << endl;
-        }
-    }
-    else if (action == 3)
-    {
-        int targetBox = readMenuChoice("Enter Target Box (1-30): ", MAX_BOXES, false);
-        int srcBox = pc.getCurrentBoxNumber();
-        if (targetBox == srcBox)
-        {
-            cout << "[ERROR] That is already the active box." << endl;
+            cout << "[ERROR] Invalid Choice." << endl;
             waitForContinue();
-            return;
+            continue;
         }
 
-        if (pc.moveBetweenBoxesByPosition(srcBox, targetBox, slot))
-        {
-            cout << "[SUCCESS] Moved slot " << slot << " to Box " << targetBox << "." << endl;
-        }
-        else
-        {
-            cout << "[ERROR] Transfer failed (check box number or target capacity)." << endl;
-        }
-    }
-    else if (action == 4)
-    {
-        const PokemonNode *p = nodeAt(boxList, slot);
-        if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
-        {
-            cout << "Release cancelled." << endl;
-            waitForContinue();
-            return;
-        }
-
-        if (boxList.releaseByPosition(slot))
-        {
-            cout << "[SUCCESS] Released Pokémon at slot " << slot << "." << endl;
-        }
-        else
-        {
-            cout << "[ERROR] Failed to release Pokémon." << endl;
-        }
-    }
-    else if (action == 5)
-    {
-        printPokemonSummary(getPokemonAtPosition(boxList, slot), true, true);
-    }
-    else if (action == 6)
-    {
-        changePokemonNickname(getPokemonAtPosition(boxList, slot));
-    }
-
-    if (action != 5)
+        if (shouldReturn)
+            break;
         waitForContinue();
+    }
 }
 
 void printSearchResults(const string &title, const vector<SearchResult> &results)
@@ -605,13 +712,20 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
         {
             if (choice == 1)
             {
-                displayParty(party);
-                if (!party.isEmpty())
+                while (true)
                 {
+                    displayParty(party);
+                    if (party.isEmpty())
+                    {
+                        waitForContinue();
+                        break;
+                    }
+
                     int slot = readMenuChoice("Select Slot # to manage (0 to go back): ",
                                               party.getCount());
-                    if (slot != 0)
-                        handlePartySubMenu(party, pc, slot);
+                    if (slot == 0)
+                        break;
+                    handlePartySubMenu(party, pc, slot);
                 }
             }
             else if (choice == 2)
@@ -624,17 +738,25 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     if (slot == 0)
                         break;
                     if (slot == NAV_NEXT)
+                    {
                         pc.setCurrentBox(pc.getCurrentBoxNumber() >= MAX_BOXES
                                              ? 1
                                              : pc.getCurrentBoxNumber() + 1);
+                    }
                     else if (slot == NAV_PREV)
+                    {
                         pc.setCurrentBox(pc.getCurrentBoxNumber() == 1
                                              ? MAX_BOXES
                                              : pc.getCurrentBoxNumber() - 1);
+                    }
                     else if (slot == NAV_GRID)
+                    {
                         boxGridView = !boxGridView;
+                    }
                     else
+                    {
                         handleBoxSubMenu(pc, party, slot);
+                    }
                 }
             }
             else if (choice == 3)
