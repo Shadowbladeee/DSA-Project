@@ -6,6 +6,7 @@
 
 void renderAutoCenteredSprite(const std::string &filepath, int targetBoxWidth = 32, int targetBoxHeight = 32);
 void playPokemonCry(int pokedexID);
+std::string formatAbilities(std::string abilitiesStr);
 void printPokemonSummary(const PokemonNode *pokemon, bool playCry = false, bool showSprite = false);
 
 #endif

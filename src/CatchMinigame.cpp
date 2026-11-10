@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <vector>
 #include <string>
@@ -6,7 +7,13 @@
 #include <ctime>
 #include <algorithm>
 #include <iomanip>
+#include <limits>
+#include <random>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include "../include/CatchMinigame.h"
+#include "../include/PokemonSummary.h"
 
 using namespace std;
 
@@ -41,6 +48,20 @@ namespace
     const vector<SpeciesData *> *speciesDB = nullptr;
     DoublyLinkedList *partyList = nullptr;
     PCSystem *pcSystem = nullptr;
+    unordered_map<int, unordered_set<string>> usedEncounterModifiers;
+
+    struct EncounterModifiers
+    {
+        int level;
+        string nature;
+        string ability;
+    };
+
+    mt19937 &getRandomGenerator()
+    {
+        static mt19937 generator(random_device{}());
+        return generator;
+    }
 
     // --- Math & Probability Helpers ---
     double calculateCaptureChance(const SpeciesData &pokemon, double modifier)
@@ -61,6 +82,89 @@ namespace
     {
         double roll = (rand() % 10000) / 100.0; // 0.00 to 99.99
         return roll < chancePercent;
+    }
+
+    bool rollShinyChance()
+    {
+        static uniform_int_distribution<int> distribution(1, 4096);
+        return distribution(getRandomGenerator()) == 1;
+    }
+
+    int getEncounterLevel(const SpeciesData &pokemon)
+    {
+        int minBaseExperience = numeric_limits<int>::max();
+        int maxBaseExperience = 0;
+        for (const SpeciesData *species : *speciesDB)
+        {
+            if (species->baseExperience <= 0)
+                continue;
+
+            minBaseExperience = min(minBaseExperience, species->baseExperience);
+            maxBaseExperience = max(maxBaseExperience, species->baseExperience);
+        }
+
+        if (pokemon.baseExperience <= 0 || minBaseExperience == numeric_limits<int>::max() ||
+            maxBaseExperience <= minBaseExperience)
+        {
+            return 1;
+        }
+
+        const double normalized =
+            static_cast<double>(pokemon.baseExperience - minBaseExperience) /
+            (maxBaseExperience - minBaseExperience);
+        return 1 + static_cast<int>(normalized * 99.0 + 0.5);
+    }
+
+    EncounterModifiers generateEncounterModifiers(const SpeciesData &pokemon)
+    {
+        static const vector<string> natures = {
+            "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
+            "Bold", "Docile", "Relaxed", "Impish", "Lax",
+            "Timid", "Hasty", "Serious", "Jolly", "Naive",
+            "Modest", "Mild", "Quiet", "Bashful", "Rash",
+            "Calm", "Gentle", "Sassy", "Careful", "Quirky"};
+
+        vector<string> abilities;
+        size_t start = 0;
+        while (start <= pokemon.abilities.size())
+        {
+            const size_t separator = pokemon.abilities.find('|', start);
+            const string ability = pokemon.abilities.substr(
+                start, separator == string::npos ? string::npos : separator - start);
+            if (!ability.empty())
+                abilities.push_back(ability);
+            if (separator == string::npos)
+                break;
+            start = separator + 1;
+        }
+        if (abilities.empty())
+            abilities.push_back("");
+
+        vector<pair<string, string>> available;
+        unordered_set<string> &used = usedEncounterModifiers[pokemon.internalID];
+        for (const string &nature : natures)
+        {
+            for (const string &ability : abilities)
+            {
+                const string signature = nature + "|" + ability;
+                if (used.find(signature) == used.end())
+                    available.emplace_back(nature, ability);
+            }
+        }
+
+        if (available.empty())
+        {
+            for (const string &nature : natures)
+            {
+                for (const string &ability : abilities)
+                    available.emplace_back(nature, ability);
+            }
+        }
+
+        uniform_int_distribution<int> chooseModifier(0, static_cast<int>(available.size()) - 1);
+        const pair<string, string> &selected = available[chooseModifier(getRandomGenerator())];
+        used.insert(selected.first + "|" + selected.second);
+        return {getEncounterLevel(pokemon), selected.first, selected.second};
     }
 
     bool readMenuChoice(const string &prompt, int minChoice, int maxChoice, int &choice)
@@ -170,12 +274,6 @@ namespace
         return true;
     }
 
-    string getFirstAbility(const SpeciesData &pokemon)
-    {
-        const size_t separator = pokemon.abilities.find('|');
-        return pokemon.abilities.substr(0, separator);
-    }
-
     string getCurrentDate()
     {
         time_t now = time(nullptr);
@@ -189,7 +287,7 @@ namespace
         return date;
     }
 
-    void addCaughtPokemon(const SpeciesData *species)
+    void addCaughtPokemon(const SpeciesData *species, const EncounterModifiers &modifiers, bool isShiny)
     {
         string nickname;
         cout << "Give " << species->name << " a nickname (press Enter to keep its name): ";
@@ -200,9 +298,13 @@ namespace
         }
 
         PokemonNode *pokemon = new PokemonNode(species);
+        pokemon->isShiny = isShiny;
+        pokemon->gender.clear();
+        pokemon->level = modifiers.level;
+        pokemon->nature = modifiers.nature;
+        pokemon->ability = modifiers.ability;
         if (!nickname.empty())
             pokemon->nickname = nickname;
-        pokemon->ability = getFirstAbility(*species);
         pokemon->dateCaught = getCurrentDate();
 
         if (partyList->getCount() < MAX_PARTY_SIZE)
@@ -225,13 +327,40 @@ namespace
              << species->name << " could not be stored.\n";
     }
 
-    void handleEncounter(const SpeciesData *pokemon)
+    void showWildPokemon(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
     {
-        stats.encountered++;
+        playPokemonCry(pokemon->pokedexID);
+
+        const string formID = to_string(pokemon->internalID);
+        const string pokedexID = to_string(pokemon->pokedexID);
+        const string spriteFolder = isShiny ? "assets/spritesShiny/" : "assets/sprites/";
+        const string formSprite = spriteFolder + formID + ".png";
+        const string baseSprite = spriteFolder + pokedexID + ".png";
+        const string fallbackSprite = spriteFolder + "0.png";
+
+        string spritePath = fallbackSprite;
+        if (ifstream(formSprite, ios::binary).good())
+            spritePath = formSprite;
+        else if (ifstream(baseSprite, ios::binary).good())
+            spritePath = baseSprite;
+
+        renderAutoCenteredSprite(spritePath);
+
         cout << "\n------------------------------------\n";
-        cout << "  A wild " << pokemon->name << " appeared!\n";
+        cout << "  A wild ";
+        if (isShiny)
+            cout << "SHINY ";
+        cout << pokemon->name << " appeared!\n";
+        cout << "  Level: " << modifiers.level << " | Nature: " << modifiers.nature
+             << " | Ability: " << (modifiers.ability.empty() ? "None" : formatAbilities(modifiers.ability)) << "\n";
         cout << "  (Base Catch Rate: " << pokemon->captureRate << ")\n";
         cout << "------------------------------------\n";
+    }
+
+    void handleEncounter(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
+    {
+        stats.encountered++;
+        showWildPokemon(pokemon, modifiers, isShiny);
 
         double captureMod = 0.0;
         double fleeMod = 0.0;
@@ -272,7 +401,7 @@ namespace
                 {
                     cout << "\nGOTCHA! " << pokemon->name << " was caught!\n";
                     stats.caught++;
-                    addCaughtPokemon(pokemon);
+                    addCaughtPokemon(pokemon, modifiers, isShiny);
 
                     active = false;
                     break;
@@ -356,17 +485,20 @@ namespace
                 expeditionOver = true;
                 return;
             }
+            const EncounterModifiers modifiers = generateEncounterModifiers(*wild);
+            const bool isShiny = rollShinyChance();
 
             if (isLastChance)
             {
                 stats.encountered++;
                 stats.escaped++;
-                cout << "\nA wild " << wild->name << " appeared, but you have no Safari Balls.\n";
+                showWildPokemon(wild, modifiers, isShiny);
+                cout << "\nYou have no Safari Balls to catch it.\n";
                 cout << "The expedition ends because you cannot catch it without Safari Balls.\n";
             }
             else
             {
-                handleEncounter(wild);
+                handleEncounter(wild, modifiers, isShiny);
             }
         }
         else
@@ -537,6 +669,7 @@ void startExpedition(const vector<SpeciesData *> &speciesDatabase,
     expeditionOver = false;
     lastChanceUsed = false;
     endingBonus = 0;
+    usedEncounterModifiers.clear();
     static bool randomSeeded = false;
     if (!randomSeeded)
     {

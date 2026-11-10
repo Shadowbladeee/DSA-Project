@@ -23,7 +23,7 @@ public:
     DoublyLinkedList &operator=(const DoublyLinkedList &) = delete;
 
     void append(const SpeciesData *species, std::string nick, std::string gndr,
-                int lvl, std::string nat, std::string abil,
+                int lvl, std::string ability, std::string nature,
                 bool shiny, std::string date);
     void displayBox() const;
 

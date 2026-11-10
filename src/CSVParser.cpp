@@ -114,6 +114,12 @@ bool getRegionalFormKey(const string &name, string &key)
     return false;
 }
 
+bool isExcludedSpecialForm(const string &name)
+{
+    return name.find("-Totem") != string::npos ||
+           (name.rfind("Pikachu-", 0) == 0 && name.find("-Cap") != string::npos);
+}
+
 vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 {
     vector<SpeciesData *> database;
@@ -137,6 +143,9 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
         vector<string> tokens = parseCSVLine(line);
 
         if (tokens.size() < 30)
+            continue;
+
+        if (isExcludedSpecialForm(tokens[1]))
             continue;
 
         int dexNum = safeStoi(tokens[0], 0);
@@ -196,6 +205,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
         species->baseStatTotal = safeStoi(tokens[10], 10);
         species->heightM = tokens[11].empty() ? 0.0f : stof(tokens[11]);
         species->weightKg = tokens[12].empty() ? 0.0f : stof(tokens[12]);
+        species->baseExperience = safeStoi(tokens[13], 13);
 
         species->abilities = tokens[14];
         species->hiddenAbility = tokens[15];

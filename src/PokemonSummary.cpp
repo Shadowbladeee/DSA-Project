@@ -215,7 +215,10 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
 
     cout << "  [CAUGHT POKÉMON]\n";
     cout << "    Nickname       : " << pokemon->nickname << endl;
-    cout << "    Gender         : " << toTitleCase(pokemon->gender) << endl;
+    if (!pokemon->gender.empty())
+    {
+        cout << "    Gender         : " << toTitleCase(pokemon->gender) << endl;
+    }
     cout << "    Level          : " << pokemon->level << endl;
     cout << "    Nature         : " << toTitleCase(pokemon->nature) << endl;
     cout << "    Current Ability: " << formatAbilities(pokemon->ability) << endl;

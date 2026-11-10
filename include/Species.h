@@ -21,6 +21,7 @@ struct SpeciesData
 
     float heightM;
     float weightKg;
+    int baseExperience;
 
     std::string abilities;
     std::string hiddenAbility;
