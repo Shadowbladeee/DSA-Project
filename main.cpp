@@ -101,45 +101,11 @@ int main()
 
         if (!loaded)
         {
-            const SpeciesData *starter = getSpeciesByPokedexNumber(pokedex, 1);
+            const SpeciesData *starter = getSpeciesByPokedexNumber(pokedex, 25);
             if (starter)
-                party.append(starter, "Neil", "Male", 19, "Overgrow", "Overgrow", false, "2026-11-06");
-
-            const SpeciesData *pidgey = getSpeciesByPokedexNumber(pokedex, 16);
-            if (pidgey)
-                party.append(pidgey, "the biggest bird", "Female", 3, "Keen Eye", "Keen Eye", false, "2026-11-06");
-
-            const SpeciesData *charmander = getSpeciesByPokedexNumber(pokedex, 4);
-            if (charmander)
-                party.append(charmander, "fire", "Male", 5, "Blaze", "Blaze", false, "2026-11-06");
-
-            const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
-            if (squirtle)
-                pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Torrent", true, "2026-11-06");
-
-            const SpeciesData *marshtomp = getSpeciesByPokedexNumber(pokedex, 259);
-            if (marshtomp)
-                pc.getCurrentList().append(marshtomp, "mudkip", "Male", 16, "Torrent", "Damp", false, "2026-11-06");
-
-            const SpeciesData *garchomp = getSpeciesByPokedexNumber(pokedex, 445);
-            if (garchomp)
-                pc.getCurrentList().append(garchomp, "garchomp", "Male", 50, "Rough Skin", "Jolly", false, "2026-11-06");
-
-            const SpeciesData *gardevoir = getSpeciesByPokedexNumber(pokedex, 282);
-            if (gardevoir)
-                pc.getCurrentList().append(gardevoir, "gardevoir", "Female", 50, "Synchronize", "Trace", false, "2026-11-06");
-
-            const SpeciesData *ursaring = getSpeciesByPokedexNumber(pokedex, 217);
-            if (ursaring)
-                pc.getCurrentList().append(ursaring, "ursaring", "Male", 50, "Guts", "Quick Feet", false, "2026-11-06");
-        
-            const SpeciesData *meowth = getSpeciesByPokedexNumber(pokedex, 52);
-            if (meowth)
-                pc.getCurrentList().append(meowth, "meowth", "Male", 50, "Pickup", "Technician", false, "2026-11-06");
+                party.append(starter, "Pikachu", "Male", 5, "Static", "Hardy", false, "2026-11-10");
 
             registerListSpecies(registeredSpecies, encounteredSpecies, party);
-            for (int box = 1; box <= MAX_BOXES; ++box)
-                registerListSpecies(registeredSpecies, encounteredSpecies, pc.getList(box));
         }
         
         int choice = -1;

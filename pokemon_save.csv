@@ -30,42 +30,6 @@ BOXNAME,27,"Box 27"
 BOXNAME,28,"Box 28"
 BOXNAME,29,"Box 29"
 BOXNAME,30,"Box 30"
-POKEDEX,1
-POKEDEX,4
-POKEDEX,7
-POKEDEX,16
-POKEDEX,38
-POKEDEX,52
-POKEDEX,217
-POKEDEX,259
-POKEDEX,445
-POKEDEX,571
-POKEDEX,10091
-POKEDEX,10168
-POKEDEX,10177
-ENCOUNTERED,1
-ENCOUNTERED,4
-ENCOUNTERED,7
-ENCOUNTERED,16
-ENCOUNTERED,38
-ENCOUNTERED,52
-ENCOUNTERED,217
-ENCOUNTERED,259
-ENCOUNTERED,445
-ENCOUNTERED,571
-ENCOUNTERED,10091
-ENCOUNTERED,10168
-ENCOUNTERED,10177
-POKEMON,0,571,"Eclipse","Unknown",1,"illusion","Hardy",0,"2026-11-10"
-POKEMON,0,38,"poopyhead","Unknown",1,"snow-cloak","Hardy",0,"2026-11-10"
-POKEMON,0,16,"the biggest bird","Female",3,"Keen Eye","Keen Eye",0,"2026-11-06"
-POKEMON,0,4,"fire","Male",5,"Blaze","Blaze",0,"2026-11-06"
-POKEMON,0,1,"Neil","Male",19,"Overgrow","Overgrow",0,"2026-11-06"
-POKEMON,1,52,"teamrocket","Male",50,"Pickup","Technician",0,"2026-11-06"
-POKEMON,1,217,"ursaring","Male",50,"Guts","Quick Feet",0,"2026-11-06"
-POKEMON,1,7,"ninja turtle","Male",5,"Torrent","Torrent",1,"2026-11-06"
-POKEMON,1,259,"mudkip","Male",16,"Torrent","Damp",0,"2026-11-06"
-POKEMON,1,10168,"mime","Male",5,"Filter","Hardy",0,"2026-11-10"
-POKEMON,1,10177,"zen","Male",5,"Zen Mode","Hardy",0,"2026-11-10"
-POKEMON,1,445,"garchomp","Male",50,"Rough Skin","Jolly",0,"2026-11-06"
-POKEMON,1,10091,"alolan","Male",5,"Gluttony","Hardy",0,"2026-11-10"
+POKEDEX,25
+ENCOUNTERED,25
+POKEMON,0,25,"Pikachu","Male",5,"Static","Hardy",0,"2026-11-10"

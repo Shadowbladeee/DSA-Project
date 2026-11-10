@@ -68,6 +68,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     if (slot < 1 || slot > party.getCount())
     {
         cout << "[ERROR] Invalid party slot position." << endl;
+        waitForContinue();
         return;
     }
 
@@ -88,11 +89,13 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         if (party.getCount() <= 1)
         {
             cout << "[ERROR] Minimum 1 Pokémon required in party!" << endl;
+            waitForContinue();
             return;
         }
         if (pc.getCurrentBoxCount() >= BOX_CAPACITY)
         {
             cout << "[ERROR] Active box is full!" << endl;
+            waitForContinue();
             return;
         }
 
@@ -108,6 +111,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         if (party.getCount() < 2)
         {
             cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
+            waitForContinue();
             return;
         }
         int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
@@ -128,6 +132,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         if (party.getCount() <= 1)
         {
             cout << "[ERROR] Cannot release your last Pokémon!" << endl;
+            waitForContinue();
             return;
         }
 
@@ -135,6 +140,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
         {
             cout << "Release cancelled." << endl;
+            waitForContinue();
             return;
         }
 
@@ -155,6 +161,9 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     {
         changePokemonNickname(getPokemonAtPosition(party, slot));
     }
+
+    if (action != 4)
+        waitForContinue();
 }
 
 void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
@@ -163,6 +172,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     if (slot < 1 || slot > boxList.getCount())
     {
         cout << "[ERROR] Invalid box slot position." << endl;
+        waitForContinue();
         return;
     }
 
@@ -184,6 +194,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         if (party.getCount() >= MAX_PARTY_SIZE)
         {
             cout << "[ERROR] Party is full!" << endl;
+            waitForContinue();
             return;
         }
 
@@ -199,6 +210,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         if (boxList.getCount() < 2)
         {
             cout << "[ERROR] Need at least 2 Pokémon in box to swap!" << endl;
+            waitForContinue();
             return;
         }
         int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
@@ -221,6 +233,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         if (targetBox == srcBox)
         {
             cout << "[ERROR] That is already the active box." << endl;
+            waitForContinue();
             return;
         }
 
@@ -239,6 +252,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
         {
             cout << "Release cancelled." << endl;
+            waitForContinue();
             return;
         }
 
@@ -259,6 +273,9 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     {
         changePokemonNickname(getPokemonAtPosition(boxList, slot));
     }
+
+    if (action != 5)
+        waitForContinue();
 }
 
 void printSearchResults(const string &title, const vector<SearchResult> &results)
@@ -340,6 +357,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     if (list.getCount() < 2)
     {
         cout << "[ERROR] Need at least 2 Pokémon to sort." << endl;
+        waitForContinue();
         return;
     }
 
@@ -635,6 +653,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 {
                     int boxNum = readMenuChoice("Enter Box (1-30): ", MAX_BOXES, false);
                     pc.switchBox(boxNum);
+                    waitForContinue();
                 }
                 else if (sub == 2)
                 {
@@ -648,6 +667,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                             cout << "[ERROR] Box name cannot be empty." << endl;
                     } while (name.empty());
                     pc.renameCurrentBox(name);
+                    waitForContinue();
                 }
                 else if (sub == 3)
                 {
@@ -724,11 +744,13 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             else if (choice != 0)
             {
                 cout << "[ERROR] Invalid Choice." << endl;
+                waitForContinue();
             }
         }
         else
         {
             cout << "[ERROR] Please enter a number." << endl;
+            waitForContinue();
         }
     }
 }

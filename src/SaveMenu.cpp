@@ -32,17 +32,23 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
             cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;
             waitForContinue();
         }
+        else
+        {
+            waitForContinue();
+        }
     }
     else if (choice == 2)
     {
         if (!saveFileExists(SAVE_FILE))
         {
             cout << "[ERROR] No save file found." << endl;
+            waitForContinue();
             return;
         }
         if (!askYesNo("Loading replaces your current party and boxes. Continue?"))
         {
             cout << "Load cancelled." << endl;
+            waitForContinue();
             return;
         }
         clearScreen();
@@ -52,6 +58,10 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
                      registeredSpecies, encounteredSpecies))
         {
             cout << "[SUCCESS] Loaded " << SAVE_FILE << "." << endl;
+            waitForContinue();
+        }
+        else
+        {
             waitForContinue();
         }
     }

@@ -257,7 +257,10 @@ void browsePokedexForms(const SpeciesData *selected,
         else if (navigation == NAV_PREV)
             formIndex = (formIndex + forms.size() - 1) % forms.size();
         else
+        {
             cout << "[ERROR] Invalid Choice." << endl;
+            waitForContinue();
+        }
     }
 }
 
@@ -343,7 +346,10 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
             if (pageEnd < entries.size())
                 ++page;
             else
+            {
                 cout << "[ERROR] Already on the last page." << endl;
+                waitForContinue();
+            }
             continue;
         }
         if (selection == NAV_PREV)
@@ -351,12 +357,16 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
             if (page > 0)
                 --page;
             else
+            {
                 cout << "[ERROR] Already on the first page." << endl;
+                waitForContinue();
+            }
             continue;
         }
         if (selection == NAV_GRID)
         {
             cout << "[ERROR] Invalid Choice." << endl;
+            waitForContinue();
             continue;
         }
 
