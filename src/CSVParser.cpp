@@ -97,24 +97,22 @@ int parseGeneration(const string &str)
     return safeStoi(str, 16, 0);
 }
 
-const unordered_set<int> ALLOWED_FORM_IDS = {
-    // Darmanitan Zen forms
-    10017, 10178,
+bool getRegionalFormKey(const string &name, string &key)
+{
+    static const string regionalMarkers[] = {"-Alola", "-Galar", "-Hisui", "-Paldea"};
 
-    // Alolan
-    10091, 10092, 10100, 10101, 10102, 10103, 10104, 10105, 10106,
-    10107, 10108, 10109, 10110, 10111, 10112, 10113, 10114, 10115,
+    for (const string &marker : regionalMarkers)
+    {
+        const size_t markerPosition = name.find(marker);
+        if (markerPosition == string::npos)
+            continue;
 
-    // Galarian
-    10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10169,
-    10170, 10171, 10172, 10173, 10174, 10175, 10176, 10177, 10179, 10180,
+        key = name.substr(0, markerPosition + marker.size());
+        return true;
+    }
 
-    // Hisuian
-    10229, 10230, 10231, 10232, 10233, 10234, 10235, 10236, 10237,
-    10238, 10239, 10240, 10241, 10242, 10243, 10244,
-
-    // Paldean
-    10250, 10251, 10252, 10253};
+    return false;
+}
 
 vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 {
@@ -129,6 +127,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
     string line;
     getline(file, line);
+    unordered_set<string> seenRegionalForms;
 
     while (getline(file, line))
     {
@@ -142,7 +141,15 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
         int dexNum = safeStoi(tokens[0], 0);
 
-        if (dexNum > 1025 && ALLOWED_FORM_IDS.find(dexNum) == ALLOWED_FORM_IDS.end())
+        string regionalFormKey;
+        const bool isRegional = getRegionalFormKey(tokens[1], regionalFormKey);
+        if (dexNum > 1025 && isRegional &&
+            !seenRegionalForms.insert(regionalFormKey).second)
+        {
+            continue;
+        }
+
+        if (dexNum > 1025 && !isRegional)
         {
             continue;
         }
