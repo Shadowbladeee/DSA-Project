@@ -57,6 +57,7 @@ int readChoice();
 int readMenuChoice(const string &prompt, int maxOption, bool allowZero = true);
 int readNonNegativeNumber(const string &prompt);
 bool askYesNo(const string &prompt);
+void displayParty(const DoublyLinkedList &party);
 
 const PokemonNode *nodeAt(const DoublyLinkedList &list, int position)
 {
@@ -78,18 +79,6 @@ string fillBar(int count, int capacity, int width)
     for (int i = 0; i < width; ++i)
         bar += (i < filled) ? "█" : "░";
     return bar + "]";
-}
-
-void displayParty(const DoublyLinkedList &party)
-{
-    cout << "\n=== CURRENT PARTY (" << party.getCount() << "/" << MAX_PARTY_SIZE << ") "
-         << fillBar(party.getCount(), MAX_PARTY_SIZE, 6) << " ===" << endl;
-    if (party.isEmpty())
-    {
-        cout << "(Empty)" << endl;
-        return;
-    }
-    party.displayBox();
 }
 
 PokemonNode *getPokemonAtPosition(const DoublyLinkedList &list, int position)
@@ -741,35 +730,35 @@ string fitText(const string &s, int width)
     return out + ".";
 }
 
-void printBoxGrid(PCSystem &pc)
+void printPokemonGrid(const DoublyLinkedList &list, int capacity, int cols)
 {
-    const int COLS = 5;    // use 6 for the classic game layout
-    const int CELL_W = 23; // COLS * CELL_W = total width (115)
-    const int rows = (BOX_CAPACITY + COLS - 1) / COLS;
+    const int CELL_W = 23;
+    const int rows = (capacity + cols - 1) / cols;
 
     vector<const PokemonNode *> mons;
-    for (const PokemonNode *p = pc.getCurrentList().getHead(); p != nullptr; p = p->next)
+    for (const PokemonNode *p = list.getHead(); p != nullptr; p = p->next)
         mons.push_back(p);
 
     for (int r = 0; r < rows; ++r)
     {
-        string line1, line2;
-        for (int c = 0; c < COLS; ++c)
+        string line1, line2, line3;
+        for (int c = 0; c < cols; ++c)
         {
-            const int idx = r * COLS + c;
-            if (idx >= BOX_CAPACITY)
+            const int idx = r * cols + c;
+            if (idx >= capacity)
                 break;
 
             ostringstream num;
             num << setw(2) << setfill('0') << (idx + 1);
 
-            string top, bottom;
+            string top, middle, bottom;
             if (idx < static_cast<int>(mons.size()))
             {
                 const PokemonNode *p = mons[idx];
                 const SpeciesData *s = p->species;
                 top = num.str() + (p->isShiny ? "\033[93m*\033[0m" : " ") +
-                      fitText(s ? s->name : "?", 10) + " L" + to_string(p->level);
+                      fitText(p->nickname, CELL_W - 4);
+                middle = " " + fitText(s ? s->name : "?", 12) + " L" + to_string(p->level);
                 if (s)
                     bottom = " " + colorTypeTag(s->type1) +
                              (s->type2.empty() ? "" : " " + colorTypeTag(s->type2));
@@ -780,10 +769,18 @@ void printBoxGrid(PCSystem &pc)
             }
 
             line1 += padTo(top, CELL_W);
-            line2 += padTo(bottom, CELL_W);
+            line2 += padTo(middle, CELL_W);
+            line3 += padTo(bottom, CELL_W);
         }
-        cout << line1 << "\n" << line2 << "\n\n";
+        cout << line1 << "\n" << line2 << "\n" << line3 << "\n\n";
     }
+}
+
+void displayParty(const DoublyLinkedList &party)
+{
+    cout << "\n=== CURRENT PARTY (" << party.getCount() << "/" << MAX_PARTY_SIZE << ") "
+         << fillBar(party.getCount(), MAX_PARTY_SIZE, 6) << " ===" << endl;
+    printPokemonGrid(party, MAX_PARTY_SIZE, 3);
 }
 
 void showActiveBox(PCSystem &pc)
@@ -795,7 +792,7 @@ void showActiveBox(PCSystem &pc)
 
     if (boxGridView)
     {
-        printBoxGrid(pc);
+        printPokemonGrid(pc.getCurrentList(), BOX_CAPACITY, 5);
         return;
     }
     if (count == 0)
