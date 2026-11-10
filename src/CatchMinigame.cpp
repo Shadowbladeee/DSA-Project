@@ -3,7 +3,6 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include <cstdlib>
 #include <ctime>
 #include <algorithm>
 #include <iomanip>
@@ -84,7 +83,8 @@ namespace
 
     bool rollPercentage(double chancePercent)
     {
-        double roll = (rand() % 10000) / 100.0; // 0.00 to 99.99
+        uniform_int_distribution<int> distribution(0, 9999);
+        const double roll = distribution(getRandomGenerator()) / 100.0;
         return roll < chancePercent;
     }
 
@@ -217,7 +217,8 @@ namespace
     void collectItems(int &inventoryCount, int inventoryMax, const string &singularName,
                       const string &pluralName, const string &inventoryName)
     {
-        const int requested = rand() % 100 < 20
+        uniform_int_distribution<int> chance(0, 99);
+        const int requested = chance(getRandomGenerator()) < 20
                                   ? uniform_int_distribution<int>(2, 5)(getRandomGenerator())
                                   : 1;
         const int collected = min(requested, inventoryMax - inventoryCount);
@@ -250,7 +251,8 @@ namespace
 
     ItemDiscovery discoverItem()
     {
-        int roll = rand() % 100; // 0 to 99
+        uniform_int_distribution<int> distribution(0, 99);
+        const int roll = distribution(getRandomGenerator());
 
         if (roll < 65)
         {
@@ -285,20 +287,26 @@ namespace
             return false;
         }
 
-        int idx = rand() % speciesDB->size();
+        uniform_int_distribution<size_t> distribution(0, speciesDB->size() - 1);
+        const size_t idx = distribution(getRandomGenerator());
         pokemon = (*speciesDB)[idx];
         return true;
     }
 
     string getCurrentDate()
     {
-        time_t now = time(nullptr);
-        tm *localTime = localtime(&now);
-        if (localTime == nullptr)
+        const time_t now = time(nullptr);
+        tm localTime;
+#ifdef _WIN32
+        if (localtime_s(&localTime, &now) != 0)
             return "";
+#else
+        if (localtime_r(&now, &localTime) == nullptr)
+            return "";
+#endif
 
         char date[11];
-        if (strftime(date, sizeof(date), "%Y-%m-%d", localTime) == 0)
+        if (strftime(date, sizeof(date), "%Y-%m-%d", &localTime) == 0)
             return "";
         return date;
     }
@@ -496,7 +504,8 @@ namespace
     void performExploration(bool isLastChance)
     {
         // The 40% item-table branch yields 26% nothing and 14% an item overall.
-        int outcomeRoll = rand() % 100;
+        uniform_int_distribution<int> distribution(0, 99);
+        const int outcomeRoll = distribution(getRandomGenerator());
 
         if (outcomeRoll < 60)
         {
@@ -737,12 +746,5 @@ void startExpedition(const vector<SpeciesData *> &speciesDatabase,
     lastChanceUsed = false;
     endingBonus = 0;
     usedEncounterModifiers.clear();
-    static bool randomSeeded = false;
-    if (!randomSeeded)
-    {
-        srand(static_cast<unsigned int>(time(nullptr)));
-        randomSeeded = true;
-    }
-
     runExpedition();
 }

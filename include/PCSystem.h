@@ -45,7 +45,7 @@ public:
     void setBoxName(int boxNumber, const std::string &name) { boxes[boxNumber - 1].name = name; }
     void setCurrentBox(int boxNumber) { currentBoxIndex = boxNumber - 1; }
 
-    int getCurrentBoxIndex() const { return currentBoxIndex; }
+    int getCurrentBoxNumber() const { return currentBoxIndex + 1; }
     std::string getCurrentBoxName() const { return boxes[currentBoxIndex].name; }
     std::vector<SearchResult> search(const std::string &query);
     std::vector<SearchResult> searchIf(const std::function<bool(const PokemonNode &)> &pred);

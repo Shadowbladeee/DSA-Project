@@ -76,7 +76,7 @@ int safeStoi(const string &str, int column, int defaultValue)
         }
         return value;
     }
-    catch (const exception &e)
+    catch (const exception &)
     {
         cerr << "[WARNING] Invalid value at column " << column << ": [" << str << "]. Using default: " << defaultValue << endl;
         return defaultValue;

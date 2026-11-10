@@ -105,7 +105,7 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         }
 
         out << "VERSION," << SAVE_VERSION << "\n";
-        out << "CURRENT_BOX," << (pc.getCurrentBoxIndex() + 1) << "\n";
+        out << "CURRENT_BOX," << pc.getCurrentBoxNumber() << "\n";
         for (int b = 1; b <= MAX_BOXES; ++b)
             out << "BOXNAME," << b << "," << quote(pc.getBoxName(b)) << "\n";
 

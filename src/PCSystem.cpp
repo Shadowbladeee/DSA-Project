@@ -66,6 +66,8 @@ bool PCSystem::moveBetweenBoxes(int sourceBox, int targetBox, int instanceID)
 
     if (srcIdx < 0 || srcIdx >= MAX_BOXES || tgtIdx < 0 || tgtIdx >= MAX_BOXES)
         return false;
+    if (srcIdx == tgtIdx)
+        return false;
     if (boxes[tgtIdx].list.getCount() >= BOX_CAPACITY)
         return false;
 
@@ -83,6 +85,8 @@ bool PCSystem::moveBetweenBoxesByPosition(int sourceBox, int targetBox, int slot
     int tgtIdx = targetBox - 1;
 
     if (srcIdx < 0 || srcIdx >= MAX_BOXES || tgtIdx < 0 || tgtIdx >= MAX_BOXES)
+        return false;
+    if (srcIdx == tgtIdx)
         return false;
     if (boxes[tgtIdx].list.getCount() >= BOX_CAPACITY)
         return false;
@@ -117,7 +121,7 @@ static string toLower(string s)
 {
     transform(s.begin(), s.end(), s.begin(),
               [](unsigned char c)
-              { return tolower(c); });
+              { return static_cast<char>(tolower(c)); });
     return s;
 }
 
