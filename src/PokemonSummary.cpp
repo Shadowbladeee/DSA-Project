@@ -203,7 +203,7 @@ void printSummary(const PokemonNode *pokemon, const SpeciesData *species,
         return;
     }
 
-    if (playCry)
+    if (playCry || showSprite)
     {
         playPokemonCry(species->pokedexID);
     }
@@ -332,6 +332,7 @@ void printSpeciesSummary(const SpeciesData *species, bool encountered, bool caug
     if (showSprite && encountered)
     {
         cout << "\n";
+        playPokemonCry(species->pokedexID);
         renderAutoCenteredSprite(getSpeciesSpritePath(species, false));
     }
 
