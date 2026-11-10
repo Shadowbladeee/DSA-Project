@@ -22,6 +22,19 @@ struct PokemonNode
 
   PokemonNode() = default;
 
+  explicit PokemonNode(const SpeciesData *speciesRef)
+      : pokemonID(0),
+        nickname(speciesRef ? speciesRef->name : ""),
+        gender("Unknown"),
+        level(1),
+        nature("Hardy"),
+        ability(""),
+        isShiny(false),
+        dateCaught(""),
+        species(speciesRef),
+        prev(nullptr),
+        next(nullptr) {}
+
   PokemonNode(int instanceID, const SpeciesData *speciesRef,
               std::string nick, std::string gndr, int lvl,
               std::string nat, std::string abil, bool shiny, std::string date)

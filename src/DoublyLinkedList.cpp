@@ -134,6 +134,9 @@ void DoublyLinkedList::insertNode(PokemonNode *node)
     if (node == nullptr || count >= 30)
         return;
 
+    if (node->pokemonID == 0)
+        node->pokemonID = globalNextID++;
+
     node->prev = nullptr;
     node->next = nullptr;
 

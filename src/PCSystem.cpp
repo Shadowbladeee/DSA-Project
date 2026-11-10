@@ -97,6 +97,24 @@ bool PCSystem::moveBetweenBoxesByPosition(int sourceBox, int targetBox, int slot
     return true;
 }
 
+int PCSystem::storePokemonInAvailableBox(PokemonNode *pokemon)
+{
+    if (pokemon == nullptr)
+        return 0;
+
+    for (int offset = 0; offset < MAX_BOXES; offset++)
+    {
+        int boxIndex = (currentBoxIndex + offset) % MAX_BOXES;
+        if (boxes[boxIndex].list.getCount() < BOX_CAPACITY)
+        {
+            boxes[boxIndex].list.insertNode(pokemon);
+            return boxIndex + 1;
+        }
+    }
+
+    return 0;
+}
+
 static string toLower(string s)
 {
     transform(s.begin(), s.end(), s.begin(),

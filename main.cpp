@@ -1,12 +1,17 @@
 #include "include/CSVParser.h"
+#include "include/CatchMinigame.h"
 #include "include/PCSystem.h"
 #include "include/PokemonSummary.h"
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
@@ -38,8 +43,6 @@ void setupConsoleAndFullscreen()
 #endif
 
 using namespace std;
-
-const int MAX_PARTY_SIZE = 6;
 
 void displayParty(const DoublyLinkedList &party)
 {
@@ -252,48 +255,8 @@ void searchPokemonPC(PCSystem &pc, const string &query)
     }
 }
 
-int main()
+void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
 {
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-    setupConsoleAndFullscreen();
-#endif
-
-    string csvFilename = "pokemon_complete.csv";
-    if (!checkCSVFile(csvFilename))
-    {
-        cout << "[ERROR] Could not find or open " << csvFilename << endl;
-        return 1;
-    }
-
-    vector<SpeciesData *> pokedex = loadSpeciesDatabase(csvFilename);
-    if (pokedex.empty())
-    {
-        cout << "[ERROR] Failed to load Pokedex database." << endl;
-        return 1;
-    }
-
-    PCSystem pc;
-    DoublyLinkedList party;
-
-    const SpeciesData *starter = getSpeciesByPokedexNumber(pokedex, 1);
-    if (starter)
-        party.append(starter, "Neil", "Male", 19, "Overgrow", "Quirky", false, "2026-11-06");
-
-    const SpeciesData *pidgey = getSpeciesByPokedexNumber(pokedex, 16);
-    if (pidgey)
-        party.append(pidgey, "the biggest bird", "Female", 3, "Keen Eye", "Quirky", false, "2026-11-06");
-
-    const SpeciesData *charmander = getSpeciesByPokedexNumber(pokedex, 4);
-    if (charmander)
-        party.append(charmander, "fire", "Male", 5, "Blaze", "Quirky", false, "2026-11-06");
-
-    const SpeciesData *squirtle = getSpeciesByPokedexNumber(pokedex, 7);
-    if (squirtle)
-        pc.getCurrentList().append(squirtle, "ninja turtle", "Male", 5, "Torrent", "Quirky", true, "2026-11-06");
-
-    printPokemonSummary(getPokemonAtPosition(party, 2), true, true);
-
     int choice = -1;
     while (choice != 0)
     {
@@ -303,7 +266,7 @@ int main()
         cout << "2. Manage Active Box (" << pc.getCurrentBoxCount() << "/" << BOX_CAPACITY << ")" << endl;
         cout << "3. Box Settings (Switch / Rename / Overview)" << endl;
         cout << "4. Search Pokémon in PC" << endl;
-        cout << "0. Exit" << endl;
+        cout << "0. Back" << endl;
         cout << "Select option: ";
 
         if (cin >> choice)
@@ -373,16 +336,76 @@ int main()
         }
         else
         {
+            if (cin.eof())
+                return;
             cin.clear();
             cin.ignore(10000, '\n');
         }
     }
+}
 
-    // Clean allocated Pokedex memory
-    for (auto *species : pokedex)
+int main()
+{
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    setupConsoleAndFullscreen();
+#endif
+
+    const string csvFilename = "pokemon_complete.csv";
+    if (!checkCSVFile(csvFilename))
     {
-        delete species;
+        cout << "[ERROR] Could not find or open " << csvFilename << endl;
+        return 1;
     }
 
+    vector<SpeciesData *> pokedex = loadSpeciesDatabase(csvFilename);
+    if (pokedex.empty())
+    {
+        cout << "[ERROR] Failed to load Pokedex database." << endl;
+        return 1;
+    }
+
+    {
+        PCSystem pc;
+        DoublyLinkedList party;
+        int choice = -1;
+
+        while (choice != 0)
+        {
+            cout << "\n=== POKEMON ADVENTURE ===" << endl;
+            cout << "1. Start an Expedition" << endl;
+            cout << "2. View PC" << endl;
+            cout << "0. Exit" << endl;
+            cout << "Select option: ";
+
+            if (!(cin >> choice))
+            {
+                if (cin.eof())
+                    break;
+
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "[ERROR] Enter 1, 2, or 0." << endl;
+                continue;
+            }
+
+            if (choice == 1)
+            {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                startExpedition(pokedex, party, pc);
+            }
+            else if (choice == 2)
+            {
+                viewPCMenu(pc, party);
+            }
+            else if (choice != 0)
+            {
+                cout << "[ERROR] Enter 1, 2, or 0." << endl;
+            }
+        }
+    }
+
+    for (auto *species : pokedex)
+        delete species;
     return 0;
 }

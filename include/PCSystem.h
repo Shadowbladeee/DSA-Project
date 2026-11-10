@@ -49,6 +49,7 @@ public:
 
     bool moveBetweenBoxes(int sourceBoxIndex, int targetBoxIndex, int instanceID);
     bool moveBetweenBoxesByPosition(int srcBoxNum, int tgtBoxNum, int slotPosition);
+    int storePokemonInAvailableBox(PokemonNode *pokemon);
 };
 
 #endif
