@@ -353,7 +353,6 @@ namespace
         cout << pokemon->name << " appeared!\n";
         cout << "  Level: " << modifiers.level << " | Nature: " << modifiers.nature
              << " | Ability: " << (modifiers.ability.empty() ? "None" : formatAbilities(modifiers.ability)) << "\n";
-        cout << "  (Base Catch Rate: " << pokemon->captureRate << ")\n";
         cout << "------------------------------------\n";
     }
 
@@ -395,7 +394,7 @@ namespace
                 playerInv.balls--;
 
                 double finalCatch = calculateCaptureChance(*pokemon, captureMod);
-                cout << "\nYou threw a Safari Ball... (Chance: " << fixed << setprecision(1) << finalCatch << "%)\n";
+                cout << "\nYou threw a Safari Ball...\n";
 
                 if (rollPercentage(finalCatch))
                 {
@@ -585,6 +584,50 @@ namespace
                endingBonus;
     }
 
+    double calculateCatchEfficiency()
+    {
+        if (stats.encountered == 0)
+            return 0.0;
+
+        return (static_cast<double>(stats.caught) / stats.encountered) * 100.0;
+    }
+
+    string calculateExpeditionGrade()
+    {
+        const double catchEfficiency = calculateCatchEfficiency();
+        // Cap score progress so repeated encounters cannot be farmed for a higher grade.
+        const double scoreProgress = min(100.0, calculateScore() / 1200.0 * 100.0);
+        const double gradePoints = catchEfficiency * 0.7 + scoreProgress * 0.3;
+
+        if (gradePoints >= 90.0)
+            return "S";
+        if (gradePoints >= 87.0)
+            return "A+";
+        if (gradePoints >= 83.0)
+            return "A";
+        if (gradePoints >= 80.0)
+            return "A-";
+        if (gradePoints >= 77.0)
+            return "B+";
+        if (gradePoints >= 73.0)
+            return "B";
+        if (gradePoints >= 70.0)
+            return "B-";
+        if (gradePoints >= 67.0)
+            return "C+";
+        if (gradePoints >= 63.0)
+            return "C";
+        if (gradePoints >= 60.0)
+            return "C-";
+        if (gradePoints >= 57.0)
+            return "D+";
+        if (gradePoints >= 53.0)
+            return "D";
+        if (gradePoints >= 50.0)
+            return "D-";
+        return "F";
+    }
+
     void showExpeditionSummary()
     {
         cout << "\n=======================================================\n";
@@ -597,14 +640,8 @@ namespace
         cout << "  Remaining Supplies  : " << playerInv.balls << " Balls, "
              << playerInv.rocks << " Rocks, " << playerInv.bait << " Bait\n";
 
-        double efficiency = 0.0;
-        if (stats.encountered > 0)
-        {
-            efficiency = (static_cast<double>(stats.caught) / stats.encountered) * 100.0;
-        }
-
-        cout << "  Catch Efficiency    : " << fixed << setprecision(2) << efficiency << "%\n";
-        cout << "  Final Score         : " << calculateScore() << "\n";
+        cout << "  Catch Efficiency    : " << fixed << setprecision(2) << calculateCatchEfficiency() << "%\n";
+        cout << "  Expedition Grade    : " << calculateExpeditionGrade() << "\n";
         cout << "=======================================================\n\n";
     }
 
