@@ -66,9 +66,24 @@ const PokemonNode *nodeAt(const DoublyLinkedList &list, int position)
     return cur;
 }
 
+string fillBar(int count, int capacity, int width)
+{
+    if (capacity <= 0)
+        capacity = 1;
+
+    int filled = (count * width + capacity - 1) / capacity; // round up, so 1 Pokémon still shows
+    filled = max(0, min(width, filled));
+
+    string bar = "[";
+    for (int i = 0; i < width; ++i)
+        bar += (i < filled) ? "█" : "░";
+    return bar + "]";
+}
+
 void displayParty(const DoublyLinkedList &party)
 {
-    cout << "\n=== CURRENT PARTY (" << party.getCount() << "/" << MAX_PARTY_SIZE << ") ===" << endl;
+    cout << "\n=== CURRENT PARTY (" << party.getCount() << "/" << MAX_PARTY_SIZE << ") "
+         << fillBar(party.getCount(), MAX_PARTY_SIZE, 6) << " ===" << endl;
     if (party.isEmpty())
     {
         cout << "(Empty)" << endl;
@@ -236,6 +251,11 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     {
         int targetBox = readMenuChoice("Enter Target Box (1-30): ", MAX_BOXES, false);
         int srcBox = pc.getCurrentBoxIndex() + 1;
+        if (targetBox == srcBox)
+        {
+            cout << "[ERROR] That is already the active box." << endl;
+            return;
+        }
 
         if (pc.moveBetweenBoxesByPosition(srcBox, targetBox, slot))
         {
@@ -599,6 +619,179 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     }
 }
 
+const int NAV_NEXT = -2;
+const int NAV_PREV = -3;
+const int NAV_GRID = -4;
+
+// Returns a slot number, 0 = back, or NAV_NEXT / NAV_PREV
+int readSlotOrNav(const string &prompt, int maxSlot)
+{
+    while (true)
+    {
+        cout << prompt;
+        string line;
+        if (!getline(cin, line))
+            return 0;
+
+        size_t s = line.find_first_not_of(" \t");
+        size_t e = line.find_last_not_of(" \t");
+        string t = (s == string::npos) ? "" : toLowerStr(line.substr(s, e - s + 1));
+
+        if (t == "n")
+            return NAV_NEXT;
+        if (t == "p")
+            return NAV_PREV;
+        if (t == "g")
+            return NAV_GRID;
+
+        istringstream in(t);
+        int v = 0;
+        if (in >> v && (in >> ws).eof() && v >= 0 && v <= maxSlot)
+            return v;
+
+        cout << "[ERROR] Invalid Choice." << endl;
+    }
+}
+
+bool boxGridView = true;
+
+// Visible characters: skips colour codes and counts each UTF-8 character once
+int visibleWidth(const string &s)
+{
+    int w = 0;
+    bool inEscape = false;
+    for (unsigned char c : s)
+    {
+        if (inEscape)
+        {
+            if (c == 'm')
+                inEscape = false;
+            continue;
+        }
+        if (c == 0x1B)
+        {
+            inEscape = true;
+            continue;
+        }
+        if ((c & 0xC0) != 0x80)
+            ++w;
+    }
+    return w;
+}
+
+string padTo(const string &s, int width)
+{
+    return s + string(max(0, width - visibleWidth(s)), ' ');
+}
+
+string fitText(const string &s, int width)
+{
+    if (visibleWidth(s) <= width)
+        return s;
+
+    string out;
+    int n = 0;
+    size_t i = 0;
+    while (i < s.size() && n < width - 1)
+    {
+        unsigned char c = static_cast<unsigned char>(s[i]);
+        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
+        out += s.substr(i, len);
+        i += len;
+        ++n;
+    }
+    return out + ".";
+}
+
+void printBoxGrid(PCSystem &pc)
+{
+    const int COLS = 5;    // use 6 for the classic game layout
+    const int CELL_W = 23; // COLS * CELL_W = total width (115)
+    const int rows = (BOX_CAPACITY + COLS - 1) / COLS;
+
+    vector<const PokemonNode *> mons;
+    for (const PokemonNode *p = pc.getCurrentList().getHead(); p != nullptr; p = p->next)
+        mons.push_back(p);
+
+    for (int r = 0; r < rows; ++r)
+    {
+        string line1, line2;
+        for (int c = 0; c < COLS; ++c)
+        {
+            const int idx = r * COLS + c;
+            if (idx >= BOX_CAPACITY)
+                break;
+
+            ostringstream num;
+            num << setw(2) << setfill('0') << (idx + 1);
+
+            string top, bottom;
+            if (idx < static_cast<int>(mons.size()))
+            {
+                const PokemonNode *p = mons[idx];
+                const SpeciesData *s = p->species;
+                top = num.str() + (p->isShiny ? "\033[93m*\033[0m" : " ") +
+                      fitText(s ? s->name : "?", 10) + " L" + to_string(p->level);
+                if (s)
+                    bottom = " " + colorTypeTag(s->type1) +
+                             (s->type2.empty() ? "" : " " + colorTypeTag(s->type2));
+            }
+            else
+            {
+                top = "\033[90m" + num.str() + " --\033[0m";
+            }
+
+            line1 += padTo(top, CELL_W);
+            line2 += padTo(bottom, CELL_W);
+        }
+        cout << line1 << "\n" << line2 << "\n\n";
+    }
+}
+
+void showActiveBox(PCSystem &pc)
+{
+    const int count = pc.getCurrentBoxCount();
+    cout << "\n=== BOX " << (pc.getCurrentBoxIndex() + 1) << "/" << MAX_BOXES << ": "
+         << pc.getCurrentBoxName() << " (" << count << "/" << BOX_CAPACITY << ") "
+         << fillBar(count, BOX_CAPACITY, 15) << " ===" << endl;
+
+    if (boxGridView)
+    {
+        printBoxGrid(pc);
+        return;
+    }
+    if (count == 0)
+    {
+        cout << "(Empty)" << endl;
+        return;
+    }
+    pc.getCurrentList().displayBox();
+}
+
+void printBoxOverview(PCSystem &pc)
+{
+    cout << "\n=== ALL BOXES (> = active) ===" << endl;
+    const int active = pc.getCurrentBoxIndex() + 1;
+
+    for (int row = 0; row < 10; ++row)
+    {
+        for (int col = 0; col < 3; ++col)
+        {
+            const int b = col * 10 + row + 1;
+            string name = pc.getBoxName(b);
+            if (name.size() > 10)
+                name = name.substr(0, 9) + ".";
+
+            ostringstream cell;
+            cell << (b == active ? '>' : ' ') << setw(2) << b << " "
+                 << left << setw(10) << name << right
+                 << " " << setw(2) << pc.getList(b).getCount() << "/" << BOX_CAPACITY;
+            cout << cell.str() << "   ";
+        }
+        cout << endl;
+    }
+}
+
 void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
 {
     int choice = -1;
@@ -630,12 +823,20 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice == 2)
             {
-                pc.displayCurrentBox();
-                if (!pc.getCurrentList().isEmpty())
+                while (true)
                 {
-                    int slot = readMenuChoice("Select Slot # to manage (0 to go back): ",
-                                              pc.getCurrentList().getCount());
-                    if (slot != 0)
+                    showActiveBox(pc);
+                    int slot = readSlotOrNav("Slot # to manage | N = next | P = previous | G = grid/list | 0 = back: ",
+                                             pc.getCurrentList().getCount());
+                    if (slot == 0)
+                        break;
+                    if (slot == NAV_NEXT)
+                        pc.setCurrentBox(pc.getCurrentBoxIndex() + 1 >= MAX_BOXES ? 1 : pc.getCurrentBoxIndex() + 2);
+                    else if (slot == NAV_PREV)
+                        pc.setCurrentBox(pc.getCurrentBoxIndex() == 0 ? MAX_BOXES : pc.getCurrentBoxIndex());
+                    else if (slot == NAV_GRID)
+                        boxGridView = !boxGridView;
+                    else
                         handleBoxSubMenu(pc, party, slot);
                 }
             }
@@ -670,7 +871,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 }
                 else if (sub == 3)
                 {
-                    pc.listAllBoxes();
+                    printBoxOverview(pc);
                 }
             }
             else if (choice == 4)
