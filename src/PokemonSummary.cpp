@@ -175,16 +175,25 @@ void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int ta
     stbi_image_free(img);
 }
 
-void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSprite)
+namespace
+{
+string getSpeciesSpritePath(const SpeciesData *species, bool isShiny)
+{
+    const string spriteFolder = isShiny ? "assets/spritesShiny/" : "assets/sprites/";
+    const string formSprite = spriteFolder + to_string(species->internalID) + ".png";
+    const string baseSprite = spriteFolder + to_string(species->pokedexID) + ".png";
+    const string fallbackSprite = spriteFolder + "0.png";
+    if (ifstream(formSprite, ios::binary).good())
+        return formSprite;
+    if (ifstream(baseSprite, ios::binary).good())
+        return baseSprite;
+    return fallbackSprite;
+}
+
+void printSummary(const PokemonNode *pokemon, const SpeciesData *species,
+                  bool playCry, bool showSprite, bool waitForInput = true)
 {
     clearScreen();
-    if (!pokemon)
-    {
-        cout << "[ERROR] Invalid Pokémon data.\n";
-        return;
-    }
-
-    const SpeciesData *species = pokemon->species;
     if (!species)
     {
         cout << "[ERROR] Invalid species data.\n";
@@ -198,19 +207,8 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
 
     if (showSprite)
     {
-        const string spriteFolder = pokemon->isShiny ? "assets/spritesShiny/" : "assets/sprites/";
-        const string formSprite = spriteFolder + to_string(species->internalID) + ".png";
-        const string baseSprite = spriteFolder + to_string(species->pokedexID) + ".png";
-        const string fallbackSprite = spriteFolder + "0.png";
-        string spritePath = fallbackSprite;
-
-        if (ifstream(formSprite, ios::binary).good())
-            spritePath = formSprite;
-        else if (ifstream(baseSprite, ios::binary).good())
-            spritePath = baseSprite;
-
-        cout << "\n";
-        renderAutoCenteredSprite(spritePath);
+        renderAutoCenteredSprite(getSpeciesSpritePath(
+            species, pokemon != nullptr && pokemon->isShiny));
     }
 
     cout << "\n====================================================================\n";
@@ -226,19 +224,22 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
     }
     cout << "\n====================================================================\n";
 
-    cout << "  [CAUGHT POKÉMON]\n";
-    cout << "    Nickname       : " << pokemon->nickname << endl;
-    if (!pokemon->gender.empty())
+    if (pokemon != nullptr)
     {
-        cout << "    Gender         : " << toTitleCase(pokemon->gender) << endl;
-    }
-    cout << "    Level          : " << pokemon->level << endl;
-    cout << "    Nature         : " << toTitleCase(pokemon->nature) << endl;
-    cout << "    Current Ability: " << formatAbilities(pokemon->ability) << endl;
-    cout << "    Shiny          : " << (pokemon->isShiny ? "Yes" : "No") << endl;
-    cout << "    Date Caught    : " << pokemon->dateCaught << endl;
+        cout << "  [CAUGHT POKÉMON]\n";
+        cout << "    Nickname       : " << pokemon->nickname << endl;
+        if (!pokemon->gender.empty())
+        {
+            cout << "    Gender         : " << toTitleCase(pokemon->gender) << endl;
+        }
+        cout << "    Level          : " << pokemon->level << endl;
+        cout << "    Nature         : " << toTitleCase(pokemon->nature) << endl;
+        cout << "    Current Ability: " << formatAbilities(pokemon->ability) << endl;
+        cout << "    Shiny          : " << (pokemon->isShiny ? "Yes" : "No") << endl;
+        cout << "    Date Caught    : " << pokemon->dateCaught << endl;
 
-    cout << "--------------------------------------------------------------------\n";
+        cout << "--------------------------------------------------------------------\n";
+    }
 
     // Metadata & Classification
     cout << "  [CLASSIFICATION & METADATA]\n";
@@ -292,5 +293,50 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
     cout << "  [DESCRIPTION]\n";
     cout << "   \"" << species->flavorText << "\"\n";
     cout << "====================================================================\n\n";
-    waitForContinue();
+    if (waitForInput)
+        waitForContinue();
+}
+} // namespace
+
+void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSprite)
+{
+    if (pokemon == nullptr)
+    {
+        clearScreen();
+        cout << "[ERROR] Invalid Pokémon data.\n";
+        return;
+    }
+
+    printSummary(pokemon, pokemon->species, playCry, showSprite);
+}
+
+void printSpeciesSummary(const SpeciesData *species, bool encountered, bool caught,
+                         bool showSprite, bool waitForInput)
+{
+    if (caught)
+    {
+        printSummary(nullptr, species, false, showSprite, waitForInput);
+        return;
+    }
+
+    clearScreen();
+    if (species == nullptr)
+    {
+        cout << "[ERROR] Invalid species data.\n";
+        return;
+    }
+
+    if (showSprite && encountered)
+    {
+        cout << "\n";
+        renderAutoCenteredSprite(getSpeciesSpritePath(species, false));
+    }
+
+    cout << "\n====================================================================\n";
+    cout << "  #" << species->pokedexID << " "
+         << (encountered ? toTitleCase(species->name) : "???") << "\n";
+    cout << "====================================================================\n\n";
+    cout << "  ???\n\n";
+    if (waitForInput)
+        waitForContinue();
 }

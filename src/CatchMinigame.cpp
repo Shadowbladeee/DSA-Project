@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <limits>
 #include <random>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -49,6 +50,8 @@ namespace
     const vector<SpeciesData *> *speciesDB = nullptr;
     DoublyLinkedList *partyList = nullptr;
     PCSystem *pcSystem = nullptr;
+    set<int> *registeredSpecies = nullptr;
+    set<int> *encounteredSpecies = nullptr;
     unordered_map<int, unordered_set<string>> usedEncounterModifiers;
 
     struct EncounterModifiers
@@ -292,6 +295,8 @@ namespace
 
     void addCaughtPokemon(const SpeciesData *species, const EncounterModifiers &modifiers, bool isShiny)
     {
+        registeredSpecies->insert(species->internalID);
+
         string nickname;
         cout << "Give " << species->name << " a nickname (press Enter to keep its name): ";
         if (!getline(cin, nickname))
@@ -363,6 +368,7 @@ namespace
     void handleEncounter(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
     {
         stats.encountered++;
+        encounteredSpecies->insert(pokemon->internalID);
         showWildPokemon(pokemon, modifiers, isShiny);
 
         double captureMod = 0.0;
@@ -698,7 +704,8 @@ namespace
 } // namespace
 
 void startExpedition(const vector<SpeciesData *> &speciesDatabase,
-                     DoublyLinkedList &party, PCSystem &pc)
+                     DoublyLinkedList &party, PCSystem &pc,
+                     set<int> &registered, set<int> &encountered)
 {
     if (speciesDatabase.empty())
     {
@@ -709,6 +716,8 @@ void startExpedition(const vector<SpeciesData *> &speciesDatabase,
     speciesDB = &speciesDatabase;
     partyList = &party;
     pcSystem = &pc;
+    registeredSpecies = &registered;
+    encounteredSpecies = &encountered;
     playerInv.balls = 10;
     playerInv.rocks = 5;
     playerInv.bait = 5;
