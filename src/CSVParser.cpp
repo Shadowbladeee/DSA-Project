@@ -97,8 +97,10 @@ int parseGeneration(const string &str)
     return safeStoi(str, 16, 0);
 }
 
-// Whitelisted regional variant forms
-const unordered_set<int> ALLOWED_REGIONAL_IDS = {
+const unordered_set<int> ALLOWED_FORM_IDS = {
+    // Darmanitan Zen forms
+    10017, 10178,
+
     // Alolan
     10091, 10092, 10100, 10101, 10102, 10103, 10104, 10105, 10106,
     10107, 10108, 10109, 10110, 10111, 10112, 10113, 10114, 10115,
@@ -140,7 +142,7 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
         int dexNum = safeStoi(tokens[0], 0);
 
-        if (dexNum > 1025 && ALLOWED_REGIONAL_IDS.find(dexNum) == ALLOWED_REGIONAL_IDS.end())
+        if (dexNum > 1025 && ALLOWED_FORM_IDS.find(dexNum) == ALLOWED_FORM_IDS.end())
         {
             continue;
         }
@@ -153,23 +155,29 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
         if (species->internalID > 1025)
         {
-            std::string baseName = species->name;
-            size_t dashPos = baseName.find('-');
-            if (dashPos != std::string::npos)
-            {
-                baseName = baseName.substr(0, dashPos);
-            }
+            const string name = species->name;
+            size_t cut = name.rfind('-');
+            bool found = false;
 
-            for (const auto *baseSpecies : database)
+            while (cut != string::npos && !found)
             {
-                if (baseSpecies->internalID <= 1025 && baseSpecies->name == baseName)
+                const string prefix = name.substr(0, cut);
+
+                for (const auto *base : database)
                 {
-                    species->pokedexID = baseSpecies->internalID;
-                    break;
+                    if (base->internalID > 1025)
+                        continue;
+                    if (base->name == prefix || base->name.rfind(prefix + "-", 0) == 0)
+                    {
+                        species->pokedexID = base->internalID;
+                        found = true;
+                        break;
+                    }
                 }
+                cut = prefix.rfind('-');
             }
         }
-
+        
         species->type1 = tokens[2];
         species->type2 = tokens[3];
         species->hp = safeStoi(tokens[4], 4);

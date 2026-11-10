@@ -8,7 +8,7 @@ using namespace std;
 
 namespace
 {
-const int SAVE_VERSION = 1;
+const int SAVE_VERSION = 2;
 
 struct SavedPokemon
 {
@@ -53,6 +53,16 @@ bool toInt(const string &s, int &out)
     }
 }
 
+const SpeciesData *findByInternalID(const vector<SpeciesData *> &pokedex, int id)
+{
+    for (const SpeciesData *s : pokedex)
+    {
+        if (s->internalID == id)
+            return s;
+    }
+    return nullptr;
+}
+
 void writeList(ofstream &out, int location, const DoublyLinkedList &list)
 {
     for (const PokemonNode *n = list.getHead(); n != nullptr; n = n->next)
@@ -60,7 +70,7 @@ void writeList(ofstream &out, int location, const DoublyLinkedList &list)
         if (n->species == nullptr)
             continue;
 
-        out << "POKEMON," << location << "," << n->species->pokedexID << ","
+        out << "POKEMON," << location << "," << n->species->internalID << ","
             << quote(n->nickname) << "," << quote(n->gender) << "," << n->level << ","
             << quote(n->ability) << "," << quote(n->nature) << ","
             << (n->isShiny ? 1 : 0) << "," << quote(n->dateCaught) << "\n";
@@ -130,6 +140,7 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
 
     int currentBox = 1;
     bool sawVersion = false;
+    int version = 0;
     vector<string> boxNames(MAX_BOXES + 1);
     for (int b = 1; b <= MAX_BOXES; ++b)
         boxNames[b] = "Box " + to_string(b);
@@ -155,8 +166,7 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
 
         if (tag == "VERSION")
         {
-            int v = 0;
-            if (t.size() != 2 || !toInt(t[1], v) || v != SAVE_VERSION)
+            if (t.size() != 2 || !toInt(t[1], version) || (version != 1 && version != 2))
                 return fail("unsupported version");
             sawVersion = true;
         }
@@ -188,7 +198,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
             if (shiny != 0 && shiny != 1)
                 return fail("bad shiny flag");
 
-            const SpeciesData *species = getSpeciesByPokedexNumber(pokedex, dex);
+            const SpeciesData *species = (version == 1) ? getSpeciesByPokedexNumber(pokedex, dex)
+                                                         : findByInternalID(pokedex, dex);
             if (species == nullptr)
                 return fail("unknown Dex number " + to_string(dex));
 
