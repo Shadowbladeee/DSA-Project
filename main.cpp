@@ -839,6 +839,7 @@ int main()
             cout << "\n=== POKEMON ADVENTURE ===" << endl;
             cout << "1. Start an Expedition" << endl;
             cout << "2. View PC" << endl;
+            cout << "3. View Party" << endl;
             cout << "0. Exit" << endl;
             cout << "Select option: ";
 
@@ -857,9 +858,13 @@ int main()
             {
                 viewPCMenu(pc, party, pokedex);
             }
+            else if (choice == 3)
+            {
+                displayParty(party);
+            }
             else if (choice != 0)
             {
-                cout << "[ERROR] Enter 1, 2, or 0." << endl;
+                cout << "[ERROR] Enter 1, 2, 3, or 0." << endl;
             }
         }
 
