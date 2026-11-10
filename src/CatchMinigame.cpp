@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <utility>
 #include "../include/CatchMinigame.h"
+#include "../include/ConsoleUtils.h"
 #include "../include/PokemonSummary.h"
 
 using namespace std;
@@ -191,6 +192,7 @@ namespace
 
     void showInventory()
     {
+        clearScreen();
         cout << "\n====================================\n";
         cout << "        CURRENT INVENTORY           \n";
         cout << "====================================\n";
@@ -198,6 +200,7 @@ namespace
         cout << "  Rocks        : " << playerInv.rocks << " / " << playerInv.maxRocks << "\n";
         cout << "  Bait         : " << playerInv.bait << " / " << playerInv.maxBait << "\n";
         cout << "====================================\n\n";
+        waitForContinue();
     }
 
     enum class ItemDiscovery
@@ -329,6 +332,7 @@ namespace
 
     void showWildPokemon(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
     {
+        clearScreen();
         playPokemonCry(pokemon->pokedexID);
 
         const string formID = to_string(pokemon->internalID);
@@ -395,6 +399,7 @@ namespace
 
                 double finalCatch = calculateCaptureChance(*pokemon, captureMod);
                 cout << "\nYou threw a Safari Ball...\n";
+                timeDelay(350);
 
                 if (rollPercentage(finalCatch))
                 {
@@ -630,6 +635,7 @@ namespace
 
     void showExpeditionSummary()
     {
+        clearScreen();
         cout << "\n=======================================================\n";
         cout << "               EXPEDITION SUMMARY                      \n";
         cout << "=======================================================\n";
@@ -643,12 +649,14 @@ namespace
         cout << "  Catch Efficiency    : " << fixed << setprecision(2) << calculateCatchEfficiency() << "%\n";
         cout << "  Expedition Grade    : " << calculateExpeditionGrade() << "\n";
         cout << "=======================================================\n\n";
+        waitForContinue();
     }
 
     void runExpedition()
     {
         while (!expeditionOver)
         {
+            clearScreen();
             cout << "\n=== SAFARI EXPEDITION MENU ===\n";
             cout << "1. Explore\n";
             cout << "2. View Inventory\n";
@@ -665,6 +673,8 @@ namespace
             if (choice == 1)
             {
                 explore();
+                if (!expeditionOver)
+                    waitForContinue();
             }
             else if (choice == 2)
             {

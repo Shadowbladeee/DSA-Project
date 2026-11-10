@@ -1,5 +1,6 @@
 #include "include/CSVParser.h"
 #include "include/CatchMinigame.h"
+#include "include/ConsoleUtils.h"
 #include "include/PCSystem.h"
 #include "include/PokemonSummary.h"
 #include "include/SaveSystem.h"
@@ -129,6 +130,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         return;
     }
 
+    clearScreen();
     cout << "\n--- PARTY SLOT " << slot << " ACTIONS ---" << endl;
     cout << "1. Deposit to Active Box [" << pc.getCurrentBoxName() << "]" << endl;
     cout << "2. Swap Position in Party" << endl;
@@ -223,6 +225,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         return;
     }
 
+    clearScreen();
     cout << "\n--- BOX SLOT " << slot << " ACTIONS ---" << endl;
     cout << "1. Withdraw to Party" << endl;
     cout << "2. Swap Position in Box" << endl;
@@ -319,10 +322,12 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
 
 void printSearchResults(const string &title, const vector<SearchResult> &results)
 {
+    clearScreen();
     cout << "\n=== " << title << " ===" << endl;
     if (results.empty())
     {
         cout << "(No matches)" << endl;
+        waitForContinue();
         return;
     }
     for (const auto &r : results)
@@ -335,6 +340,7 @@ void printSearchResults(const string &title, const vector<SearchResult> &results
              << r.generation << endl;
     }
     cout << results.size() << " found." << endl;
+    waitForContinue();
 }
 
 const vector<string> POKEMON_TYPES = {
@@ -353,6 +359,7 @@ void printTypeChoice(size_t index, const string &type, bool useTag)
 
 string chooseType()
 {
+    clearScreen();
     cout << "\n--- SELECT TYPE ---" << endl;
     for (size_t i = 0; i < POKEMON_TYPES.size(); ++i)
     {
@@ -375,6 +382,7 @@ const vector<string> GENERATION_LABELS = {
 
 int chooseGeneration()
 {
+    clearScreen();
     cout << "\n--- SELECT GENERATION ---" << endl;
     for (size_t i = 0; i < GENERATION_LABELS.size(); ++i)
     {
@@ -469,6 +477,7 @@ bool askYesNo(const string &prompt)
 
 void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesData *> &pokedex)
 {
+    clearScreen();
     cout << "\n--- SAVE / LOAD ---" << endl;
     cout << "1. Save" << endl;
     cout << "2. Load" << endl;
@@ -479,8 +488,14 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesD
 
     if (choice == 1)
     {
+        clearScreen();
+        cout << "Saving game..." << endl;
+        timeDelay(500);
         if (saveGame(SAVE_FILE, pc, party))
+        {
             cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;
+            waitForContinue();
+        }
     }
     else if (choice == 2)
     {
@@ -494,8 +509,14 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesD
             cout << "Load cancelled." << endl;
             return;
         }
+        clearScreen();
+        cout << "Loading game..." << endl;
+        timeDelay(500);
         if (loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE))
+        {
             cout << "[SUCCESS] Loaded " << SAVE_FILE << "." << endl;
+            waitForContinue();
+        }
     }
 }
 
@@ -507,6 +528,7 @@ int chooseSecondType(const string &firstType)
 
     while (true)
     {
+        clearScreen();
         cout << "\n--- SELECT TYPE 2 ---" << endl;
         for (size_t i = 0; i < options.size(); ++i)
         {
@@ -570,6 +592,7 @@ NodeLess typeOrder(bool descending)
 
 void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
 {
+    clearScreen();
     cout << "\n--- SORT ---" << endl;
     cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
     cout << "2. Party" << endl;
@@ -585,6 +608,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         return;
     }
 
+    clearScreen();
     cout << "\n--- SORT BY ---" << endl;
     cout << "1. Name" << endl;
     cout << "2. Type" << endl;
@@ -596,6 +620,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
 
     if (field == 1)
     {
+        clearScreen();
         cout << "\n1. Ascending (A-Z)" << endl;
         cout << "2. Descending (Z-A)" << endl;
         cout << "0. Back" << endl;
@@ -608,11 +633,14 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         else
             list.sort([](const PokemonNode &a, const PokemonNode &b) { return nameLess(b, a); });
 
+        clearScreen();
         cout << "[SUCCESS] Sorted by name." << endl;
         list.displayBox();
+        waitForContinue();
     }
     else if (field == 2)
     {
+        clearScreen();
         cout << "\n1. Ascending (Normal -> Fairy)" << endl;
         cout << "2. Descending (Fairy -> Normal)" << endl;
         cout << "0. Back" << endl;
@@ -622,12 +650,15 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
 
         list.sort(typeOrder(dir == 2));
 
+        clearScreen();
         cout << "[SUCCESS] Sorted by type ("
              << (dir == 1 ? "ascending" : "descending") << ")." << endl;
         list.displayBox();
+        waitForContinue();
     }
     else if (field == 3)
     {
+        clearScreen();
         cout << "\n1. Ascending (low -> high)" << endl;
         cout << "2. Descending (high -> low)" << endl;
         cout << "0. Back" << endl;
@@ -640,9 +671,11 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         else
             list.sort([](const PokemonNode &a, const PokemonNode &b) { return dexLess(b, a); });
 
+        clearScreen();
         cout << "[SUCCESS] Sorted by Dex number ("
              << (dir == 1 ? "ascending" : "descending") << ")." << endl;
         list.displayBox();
+        waitForContinue();
     }
 }
 
@@ -778,6 +811,7 @@ void printPokemonGrid(const DoublyLinkedList &list, int capacity, int cols)
 
 void displayParty(const DoublyLinkedList &party)
 {
+    clearScreen();
     cout << "\n=== CURRENT PARTY (" << party.getCount() << "/" << MAX_PARTY_SIZE << ") "
          << fillBar(party.getCount(), MAX_PARTY_SIZE, 6) << " ===" << endl;
     printPokemonGrid(party, MAX_PARTY_SIZE, 3);
@@ -785,6 +819,7 @@ void displayParty(const DoublyLinkedList &party)
 
 void showActiveBox(PCSystem &pc)
 {
+    clearScreen();
     const int count = pc.getCurrentBoxCount();
     cout << "\n=== BOX " << (pc.getCurrentBoxIndex() + 1) << "/" << MAX_BOXES << ": "
          << pc.getCurrentBoxName() << " (" << count << "/" << BOX_CAPACITY << ") "
@@ -805,6 +840,7 @@ void showActiveBox(PCSystem &pc)
 
 void printBoxOverview(PCSystem &pc)
 {
+    clearScreen();
     cout << "\n=== ALL BOXES (> = active) ===" << endl;
     const int active = pc.getCurrentBoxIndex() + 1;
 
@@ -825,6 +861,7 @@ void printBoxOverview(PCSystem &pc)
         }
         cout << endl;
     }
+    waitForContinue();
 }
 
 void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
@@ -832,6 +869,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
     int choice = -1;
     while (choice != 0)
     {
+        clearScreen();
         cout << "\n=== POKEMON STORAGE SYSTEM ===" << endl;
         cout << "Active Box: [" << pc.getCurrentBoxName() << "]" << endl;
         cout << "1. Manage Party (" << party.getCount() << "/" << MAX_PARTY_SIZE << ")" << endl;
@@ -877,6 +915,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice == 3)
             {
+                clearScreen();
                 cout << "\n--- BOX SETTINGS ---" << endl;
                 cout << "1. Switch Active Box" << endl;
                 cout << "2. Rename Active Box" << endl;
@@ -911,6 +950,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice == 4)
             {
+                clearScreen();
                 cout << "\n--- SEARCH PC ---" << endl;
                 cout << "1. By nickname / species" << endl;
                 cout << "2. By type" << endl;
@@ -1062,6 +1102,7 @@ int main()
         int choice = -1;
         while (choice != 0)
         {
+            clearScreen();
             cout << "\n=== POKEMON ADVENTURE ===" << endl;
             cout << "1. Start an Expedition" << endl;
             cout << "2. View PC" << endl;
@@ -1081,6 +1122,7 @@ int main()
             else if (choice == 3)
             {
                 displayParty(party);
+                waitForContinue();
             }
             else if (choice == 4)
             {

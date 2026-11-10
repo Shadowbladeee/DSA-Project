@@ -1,4 +1,5 @@
 #include "../include/PokemonSummary.h"
+#include "../include/ConsoleUtils.h"
 #include "../include/TypeTags.h"
 #include <iostream>
 #include <fstream>
@@ -176,6 +177,7 @@ void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int ta
 
 void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSprite)
 {
+    clearScreen();
     if (!pokemon)
     {
         cout << "[ERROR] Invalid Pokémon data.\n";
@@ -290,4 +292,5 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
     cout << "  [DESCRIPTION]\n";
     cout << "   \"" << species->flavorText << "\"\n";
     cout << "====================================================================\n\n";
+    waitForContinue();
 }
