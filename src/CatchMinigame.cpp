@@ -36,7 +36,7 @@ namespace
     {
         int encountered = 0;
         int caught = 0;
-        int escaped = 0;
+        int pokemonFled = 0;
         int itemsCollected = 0;
     };
 
@@ -211,6 +211,40 @@ namespace
         Bait
     };
 
+    void collectItems(int &inventoryCount, int inventoryMax, const string &singularName,
+                      const string &pluralName, const string &inventoryName)
+    {
+        const int requested = rand() % 100 < 20
+                                  ? uniform_int_distribution<int>(2, 5)(getRandomGenerator())
+                                  : 1;
+        const int collected = min(requested, inventoryMax - inventoryCount);
+
+        if (collected == 0)
+        {
+            cout << "\n[FOUND ITEM] You found " << singularName
+                 << ", but your bag is full!\n";
+            return;
+        }
+
+        inventoryCount += collected;
+        stats.itemsCollected += collected;
+
+        if (requested == 1)
+        {
+            cout << "\n[FOUND ITEM] You found " << singularName
+                 << "! (" << inventoryName << ": " << inventoryCount << ")\n";
+        }
+        else
+        {
+            cout << "\n[FOUND ITEM] You found a handful of " << pluralName;
+            if (collected < requested)
+                cout << ", but only " << collected << " fit in your bag";
+            else
+                cout << " (" << collected << ")";
+            cout << "! (" << inventoryName << ": " << inventoryCount << ")\n";
+        }
+    }
+
     ItemDiscovery discoverItem()
     {
         int roll = rand() % 100; // 0 to 99
@@ -222,44 +256,20 @@ namespace
         }
         else if (roll < 80)
         { // 15% Ball
-            if (playerInv.balls < playerInv.maxBalls)
-            {
-                playerInv.balls++;
-                stats.itemsCollected++;
-                cout << "\n[FOUND ITEM] You found a Safari Ball! (Balls: " << playerInv.balls << ")\n";
-            }
-            else
-            {
-                cout << "\n[FOUND ITEM] You found a Safari Ball, but your bag is full!\n";
-            }
+            collectItems(playerInv.balls, playerInv.maxBalls, "a Safari Ball",
+                         "Safari Balls", "Balls");
             return ItemDiscovery::SafariBall;
         }
         else if (roll < 90)
         { // 10% Rock
-            if (playerInv.rocks < playerInv.maxRocks)
-            {
-                playerInv.rocks++;
-                stats.itemsCollected++;
-                cout << "\n[FOUND ITEM] You found a Rock! (Rocks: " << playerInv.rocks << ")\n";
-            }
-            else
-            {
-                cout << "\n[FOUND ITEM] You found a Rock, but your bag is full!\n";
-            }
+            collectItems(playerInv.rocks, playerInv.maxRocks, "a Rock",
+                         "rocks", "Rocks");
             return ItemDiscovery::Rock;
         }
         else
         { // 10% Bait
-            if (playerInv.bait < playerInv.maxBait)
-            {
-                playerInv.bait++;
-                stats.itemsCollected++;
-                cout << "\n[FOUND ITEM] You found some Bait! (Bait: " << playerInv.bait << ")\n";
-            }
-            else
-            {
-                cout << "\n[FOUND ITEM] You found Bait, but your bag is full!\n";
-            }
+            collectItems(playerInv.bait, playerInv.maxBait, "some Bait",
+                         "Bait", "Bait");
             return ItemDiscovery::Bait;
         }
     }
@@ -327,7 +337,7 @@ namespace
 
         delete pokemon;
         cout << "[ERROR] Your party and all PC boxes are full; "
-             << species->name << " could not be stored.\n";
+             << species->name << " could not be stored and was released.\n";
     }
 
     void showWildPokemon(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
@@ -358,6 +368,7 @@ namespace
         cout << "  Level: " << modifiers.level << " | Nature: " << modifiers.nature
              << " | Ability: " << (modifiers.ability.empty() ? "None" : formatAbilities(modifiers.ability)) << "\n";
         cout << "------------------------------------\n";
+        timeDelay(1000);
     }
 
     void handleEncounter(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
@@ -386,7 +397,7 @@ namespace
                 expeditionOver = true;
                 return;
             }
-            bool failedBallThrow = false;
+            bool turnCompleted = false;
 
             if (action == 1)
             { // SAFARI BALL
@@ -396,10 +407,11 @@ namespace
                     continue;
                 }
                 playerInv.balls--;
+                turnCompleted = true;
 
                 double finalCatch = calculateCaptureChance(*pokemon, captureMod);
                 cout << "\nYou threw a Safari Ball...\n";
-                timeDelay(350);
+                timeDelay(1000);
 
                 if (rollPercentage(finalCatch))
                 {
@@ -413,7 +425,6 @@ namespace
                 else
                 {
                     cout << "\nOh no! The Pokémon broke free!\n";
-                    failedBallThrow = true;
                 }
             }
             else if (action == 2)
@@ -426,6 +437,7 @@ namespace
                 playerInv.rocks--;
                 captureMod = 20.0;
                 fleeMod = 15.0;
+                turnCompleted = true;
                 cout << "\nYou threw a Rock! " << pokemon->name << " looks angry!\n";
             }
             else if (action == 3)
@@ -438,23 +450,23 @@ namespace
                 playerInv.bait--;
                 captureMod = -10.0;
                 fleeMod = -15.0;
+                turnCompleted = true;
                 cout << "\nYou threw Bait! " << pokemon->name << " is eating...\n";
             }
             else if (action == 4)
             { // RUN
-                cout << "\nYou fled from the encounter.\n";
-                stats.escaped++;
+                cout << "\nYou ran away from the encounter.\n";
                 active = false;
                 break;
             }
-            // Only a failed Safari Ball throw triggers a flee check.
-            if (failedBallThrow)
+            if (turnCompleted)
             {
                 double finalFlee = calculateFleeChance(*pokemon, fleeMod);
+                timeDelay(1000);
                 if (rollPercentage(finalFlee))
                 {
                     cout << "\nThe wild " << pokemon->name << " fled!\n";
-                    stats.escaped++;
+                    stats.pokemonFled++;
                     active = false;
                 }
                 else
@@ -467,7 +479,6 @@ namespace
             if (playerInv.balls <= 0 && active)
             {
                 cout << "\n[!] You ran out of Safari Balls! The encounter ends.\n";
-                stats.escaped++;
                 active = false;
             }
         }
@@ -495,7 +506,6 @@ namespace
             if (isLastChance)
             {
                 stats.encountered++;
-                stats.escaped++;
                 showWildPokemon(wild, modifiers, isShiny);
                 cout << "\nYou have no Safari Balls to catch it.\n";
                 cout << "The expedition ends because you cannot catch it without Safari Balls.\n";
@@ -546,6 +556,7 @@ namespace
         lastChanceUsed = true;
         cout << "\n[!] Last Chance: one final exploration attempt!\n";
         cout << "\nYou continue searching the area...\n";
+        timeDelay(1000);
         performExploration(true);
 
         if (expeditionOver)
@@ -641,7 +652,7 @@ namespace
         cout << "=======================================================\n";
         cout << "  Total Encounters    : " << stats.encountered << "\n";
         cout << "  Pokémon Caught      : " << stats.caught << "\n";
-        cout << "  Pokémon Escaped     : " << stats.escaped << "\n";
+        cout << "  Pokémon Fled        : " << stats.pokemonFled << "\n";
         cout << "  Items Collected     : " << stats.itemsCollected << "\n";
         cout << "  Remaining Supplies  : " << playerInv.balls << " Balls, "
              << playerInv.rocks << " Rocks, " << playerInv.bait << " Bait\n";

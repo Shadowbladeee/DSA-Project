@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <cctype>
+#include <sstream>
 #include <string>
 #include <algorithm>
 
@@ -142,6 +143,7 @@ void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int ta
         cropMinY = (max)(0, cropMinY - 1);
     }
 
+    ostringstream renderedSprite;
     for (int y = cropMinY; y <= cropMaxY; y += 2)
     {
         for (int x = cropMinX; x <= cropMaxX; x++)
@@ -161,18 +163,19 @@ void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int ta
 
             if (tA < 128 && bA < 128)
             {
-                cout << " ";
+                renderedSprite << " ";
                 continue;
             }
 
-            cout << "\033[38;2;" << (int)tR << ";" << (int)tG << ";" << (int)tB << "m"
-                 << "\033[48;2;" << (int)bR << ";" << (int)bG << ";" << (int)bB << "m"
-                 << "▀\033[0m";
+            renderedSprite << "\033[38;2;" << (int)tR << ";" << (int)tG << ";" << (int)tB << "m"
+                           << "\033[48;2;" << (int)bR << ";" << (int)bG << ";" << (int)bB << "m"
+                           << "▀\033[0m";
         }
-        cout << "\n";
+        renderedSprite << "\n";
     }
 
     stbi_image_free(img);
+    cout << renderedSprite.str() << flush;
 }
 
 void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSprite)
