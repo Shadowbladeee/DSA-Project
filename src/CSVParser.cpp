@@ -85,26 +85,16 @@ int safeStoi(const string &str, int column, int defaultValue)
 
 int parseGeneration(const string &str)
 {
-    if (str.find("gen-i") != string::npos)
-        return 1;
-    if (str.find("gen-ii") != string::npos)
-        return 2;
-    if (str.find("gen-iii") != string::npos)
-        return 3;
-    if (str.find("gen-iv") != string::npos)
-        return 4;
-    if (str.find("gen-v") != string::npos)
-        return 5;
-    if (str.find("gen-vi") != string::npos)
-        return 6;
-    if (str.find("gen-vii") != string::npos)
-        return 7;
-    if (str.find("gen-viii") != string::npos)
-        return 8;
-    if (str.find("gen-ix") != string::npos)
-        return 9;
+    static const char *GENS[] = {"gen-i", "gen-ii", "gen-iii", "gen-iv", "gen-v",
+                                 "gen-vi", "gen-vii", "gen-viii", "gen-ix"};
 
-    return safeStoi(str, 16, 1);
+    for (int i = 0; i < 9; i++)
+    {
+        if (str == GENS[i])
+            return i + 1;
+    }
+
+    return safeStoi(str, 16, 0);
 }
 
 // Whitelisted regional variant forms

@@ -3,6 +3,7 @@
 
 #include "DoublyLinkedList.h"
 #include "Species.h"
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,10 @@ struct SearchResult
     int slot;
     std::string nickname;
     std::string speciesName;
+    std::string type1;
+    std::string type2;
+    int generation = 0;
+    int dexNumber = 0;
 };
 
 class PCSystem
@@ -35,9 +40,20 @@ private:
 public:
     PCSystem();
 
+    DoublyLinkedList &getList(int boxNumber) { return boxes[boxNumber - 1].list; }
+    const std::string &getBoxName(int boxNumber) const { return boxes[boxNumber - 1].name; }
+    void setBoxName(int boxNumber, const std::string &name) { boxes[boxNumber - 1].name = name; }
+    void setCurrentBox(int boxNumber) { currentBoxIndex = boxNumber - 1; }
+
     int getCurrentBoxIndex() const { return currentBoxIndex; }
     std::string getCurrentBoxName() const { return boxes[currentBoxIndex].name; }
     std::vector<SearchResult> search(const std::string &query);
+    std::vector<SearchResult> searchIf(const std::function<bool(const PokemonNode &)> &pred);
+    std::vector<SearchResult> searchByType(const std::string &type);
+    std::vector<SearchResult> searchByTypePair(const std::string &type1, const std::string &type2);
+    std::vector<SearchResult> searchByMonoType(const std::string &type);
+    std::vector<SearchResult> searchByGeneration(int generation);
+    std::vector<SearchResult> searchByDexNumber(int dexNumber);
     int getCurrentBoxCount() const { return boxes[currentBoxIndex].list.getCount(); }
 
     bool switchBox(int boxNumber);

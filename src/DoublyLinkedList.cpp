@@ -1,5 +1,6 @@
 #include "../include/DoublyLinkedList.h"
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -67,8 +68,11 @@ void DoublyLinkedList::displayBox() const
     while (current != nullptr)
     {
         cout << slot << ": " << current->nickname
-             << " (" << current->species->name
-             << ") - Lv. " << current->level << endl;
+        << " (#" << right << setfill('0') << setw(3) << current->species->pokedexID
+        << setfill(' ') << " " << current->species->name
+        << ") [" << current->species->type1
+        << (current->species->type2.empty() ? "" : "/" + current->species->type2)
+        << "] - Lv. " << current->level << endl;
         current = current->next;
         slot++;
     }
@@ -188,4 +192,62 @@ bool DoublyLinkedList::releaseByPosition(int position)
 
     delete target; // Free dynamically allocated memory
     return true;
+}
+
+PokemonNode *DoublyLinkedList::mergeLists(PokemonNode *a, PokemonNode *b, const NodeLess &less)
+{
+    PokemonNode dummy;
+    dummy.next = nullptr;
+    PokemonNode *last = &dummy;
+
+    while (a != nullptr && b != nullptr)
+    {
+        if (less(*b, *a))
+        {
+            last->next = b;
+            b = b->next;
+        }
+        else
+        {
+            last->next = a;
+            a = a->next;
+        }
+        last = last->next;
+    }
+    last->next = (a != nullptr) ? a : b;
+    return dummy.next;
+}
+
+PokemonNode *DoublyLinkedList::mergeSortRec(PokemonNode *h, const NodeLess &less)
+{
+    if (h == nullptr || h->next == nullptr)
+        return h;
+
+    PokemonNode *slow = h;
+    PokemonNode *fast = h->next;
+    while (fast != nullptr && fast->next != nullptr)
+    {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+    PokemonNode *second = slow->next;
+    slow->next = nullptr;
+
+    return mergeLists(mergeSortRec(h, less), mergeSortRec(second, less), less);
+}
+
+void DoublyLinkedList::sort(const NodeLess &less)
+{
+    if (count < 2)
+        return;
+
+    head = mergeSortRec(head, less);
+
+    PokemonNode *prevNode = nullptr;
+    for (PokemonNode *cur = head; cur != nullptr; cur = cur->next)
+    {
+        cur->prev = prevNode;
+        prevNode = cur;
+    }
+    tail = prevNode;
 }

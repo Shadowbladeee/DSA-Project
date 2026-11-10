@@ -4,16 +4,14 @@
 #include <cctype>
 #include <vector>
 #include <string>
+#include <functional>
 
 using namespace std;
 
-PCSystem::PCSystem()
+PCSystem::PCSystem() : boxes(MAX_BOXES), currentBoxIndex(0)
 {
-    currentBoxIndex = 0;
-    for (int i = 1; i <= MAX_BOXES; i++)
-    {
-        boxes.push_back(Box("Box " + to_string(i)));
-    }
+    for (int i = 0; i < MAX_BOXES; i++)
+        boxes[i].name = "Box " + to_string(i + 1);
 }
 
 bool PCSystem::switchBox(int boxNumber)
@@ -123,50 +121,98 @@ static string toLower(string s)
     return s;
 }
 
-vector<SearchResult> PCSystem::search(const string &query)
+vector<SearchResult> PCSystem::searchIf(const function<bool(const PokemonNode &)> &pred)
 {
     vector<SearchResult> results;
-    const string q = toLower(query);
-    if (q.empty())
-        return results;
-
     for (int i = 0; i < MAX_BOXES; i++)
     {
         int slot = 1;
         for (PokemonNode *cur = boxes[i].list.getHead(); cur != nullptr; cur = cur->next, slot++)
         {
-            string species = cur->species ? cur->species->name : "";
-            if (toLower(cur->nickname).find(q) != string::npos ||
-                toLower(species).find(q) != string::npos)
+            if (!pred(*cur))
+                continue;
+
+            SearchResult r;
+            r.boxNumber = i + 1;
+            r.boxName = boxes[i].name;
+            r.slot = slot;
+            r.nickname = cur->nickname;
+            if (cur->species)
             {
-                results.push_back({i + 1, boxes[i].name, slot, cur->nickname, species});
+                r.speciesName = cur->species->name;
+                r.type1 = cur->species->type1;
+                r.type2 = cur->species->type2;
+                r.generation = cur->species->generation;
+                r.dexNumber = cur->species->pokedexID;
             }
+            results.push_back(r);
         }
     }
     return results;
 }
 
-int getDisplayPokedexNumber(const SpeciesData *species, const std::vector<SpeciesData *> &database)
+vector<SearchResult> PCSystem::search(const string &query)
 {
-    if (!species)
-        return 0;
-    if (species->pokedexID <= 1025)
-        return species->pokedexID;
+    const string q = toLower(query);
+    if (q.empty())
+        return {};
 
-    string baseName = species->name;
-    size_t dashPos = baseName.find('-');
-    if (dashPos != string::npos)
-    {
-        baseName = baseName.substr(0, dashPos);
-    }
+    return searchIf([&](const PokemonNode &p) {
+        string species = p.species ? p.species->name : "";
+        return toLower(p.nickname).find(q) != string::npos ||
+               toLower(species).find(q) != string::npos;
+    });
+}
 
-    for (const auto *baseSpecies : database)
-    {
-        if (baseSpecies->pokedexID <= 1025 && baseSpecies->name == baseName)
-        {
-            return baseSpecies->pokedexID;
-        }
-    }
+vector<SearchResult> PCSystem::searchByType(const string &type)
+{
+    const string t = toLower(type);
+    if (t.empty())
+        return {};
 
-    return species->pokedexID;
+    return searchIf([&](const PokemonNode &p) {
+        return p.species &&
+               (toLower(p.species->type1) == t || toLower(p.species->type2) == t);
+    });
+}
+
+vector<SearchResult> PCSystem::searchByGeneration(int generation)
+{
+    return searchIf([generation](const PokemonNode &p) {
+        return p.species && p.species->generation == generation;
+    });
+}
+
+vector<SearchResult> PCSystem::searchByDexNumber(int dexNumber)
+{
+    return searchIf([dexNumber](const PokemonNode &p) {
+        return p.species && p.species->pokedexID == dexNumber;
+    });
+}
+
+vector<SearchResult> PCSystem::searchByTypePair(const string &type1, const string &type2)
+{
+    const string a = toLower(type1);
+    const string b = toLower(type2);
+    if (a.empty() || b.empty())
+        return {};
+
+    return searchIf([a, b](const PokemonNode &p) {
+        if (!p.species)
+            return false;
+        string x = toLower(p.species->type1);
+        string y = toLower(p.species->type2);
+        return (x == a && y == b) || (x == b && y == a);
+    });
+}
+
+vector<SearchResult> PCSystem::searchByMonoType(const string &type)
+{
+    const string t = toLower(type);
+    if (t.empty())
+        return {};
+
+    return searchIf([t](const PokemonNode &p) {
+        return p.species && toLower(p.species->type1) == t && p.species->type2.empty();
+    });
 }
