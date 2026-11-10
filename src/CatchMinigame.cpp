@@ -79,8 +79,7 @@ namespace
                 return true;
             }
 
-            cout << "Invalid selection. Enter a number from "
-                 << minChoice << " to " << maxChoice << ".\n";
+            cout << "[ERROR] Invalid Choice.\n";
         }
     }
 
@@ -315,12 +314,6 @@ namespace
                 active = false;
                 break;
             }
-            else
-            {
-                cout << "\nInvalid selection.\n";
-                continue;
-            }
-
             // Only a failed Safari Ball throw triggers a flee check.
             if (failedBallThrow)
             {
@@ -517,10 +510,6 @@ namespace
 
                 cout << "You decided to wrap up the expedition.\n";
                 expeditionOver = true;
-            }
-            else
-            {
-                cout << "Invalid menu option.\n";
             }
         }
 

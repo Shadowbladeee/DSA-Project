@@ -3,14 +3,15 @@
 #include "include/PCSystem.h"
 #include "include/PokemonSummary.h"
 #include "include/SaveSystem.h"
+#include "include/TypeTags.h"
 #include <iostream>
 #include <iomanip>
 #include <string>
 #include <vector>
-#include <limits>
 #include <functional>
 #include <algorithm>
 #include <cctype>
+#include <sstream>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -53,6 +54,8 @@ using namespace std;
 const string SAVE_FILE = "pokemon_save.csv";
 
 int readChoice();
+int readMenuChoice(const string &prompt, int maxOption, bool allowZero = true);
+int readNonNegativeNumber(const string &prompt);
 bool askYesNo(const string &prompt);
 
 const PokemonNode *nodeAt(const DoublyLinkedList &list, int position)
@@ -61,15 +64,6 @@ const PokemonNode *nodeAt(const DoublyLinkedList &list, int position)
     for (int i = 1; cur != nullptr && i < position; ++i)
         cur = cur->next;
     return cur;
-}
-
-bool validChoice(int pick, int maxOption)
-{
-    if (pick >= 1 && pick <= maxOption)
-        return true;
-    if (pick != 0)
-        cout << "[ERROR] Invalid choice." << endl;
-    return false;
 }
 
 void displayParty(const DoublyLinkedList &party)
@@ -109,10 +103,8 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     cout << "3. Release Pokémon" << endl;
     cout << "4. View Pokémon Summary" << endl;
     cout << "0. Cancel" << endl;
-    cout << "Choice: ";
-
-    int action = readChoice();
-    if (!validChoice(action, 4))
+    int action = readMenuChoice("Choice: ", 4);
+    if (action == 0)
         return;
 
     if (action == 1)
@@ -142,8 +134,10 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
             return;
         }
-        cout << "Swap slot " << slot << " with slot #: ";
-        int targetPos = readChoice();
+        int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+                                       party.getCount());
+        if (targetPos == 0)
+            return;
         if (party.swapNodes(slot, targetPos))
         {
             cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
@@ -199,10 +193,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     cout << "4. Release Pokémon" << endl;
     cout << "5. View Pokémon Summary" << endl;
     cout << "0. Cancel" << endl;
-    cout << "Choice: ";
-
-    int action = readChoice();
-    if (!validChoice(action, 5))
+    int action = readMenuChoice("Choice: ", 5);
+    if (action == 0)
         return;
 
     if (action == 1)
@@ -227,8 +219,10 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             cout << "[ERROR] Need at least 2 Pokémon in box to swap!" << endl;
             return;
         }
-        cout << "Swap slot " << slot << " with slot #: ";
-        int targetPos = readChoice();
+        int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+                                       boxList.getCount());
+        if (targetPos == 0)
+            return;
         if (boxList.swapNodes(slot, targetPos))
         {
             cout << "[SUCCESS] Swapped slot " << slot << " and " << targetPos << "." << endl;
@@ -240,8 +234,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
     else if (action == 3)
     {
-        cout << "Enter Target Box (1-30): ";
-        int targetBox = readChoice();
+        int targetBox = readMenuChoice("Enter Target Box (1-30): ", MAX_BOXES, false);
         int srcBox = pc.getCurrentBoxIndex() + 1;
 
         if (pc.moveBetweenBoxesByPosition(srcBox, targetBox, slot))
@@ -289,8 +282,9 @@ void printSearchResults(const string &title, const vector<SearchResult> &results
     {
         cout << "Box " << r.boxNumber << " (" << r.boxName << ") Slot " << r.slot
              << ": " << r.nickname << " (#" << right << setfill('0') << setw(3) << r.dexNumber
-             << setfill(' ') << " " << r.speciesName << ") ["
-             << r.type1 << (r.type2.empty() ? "" : "/" + r.type2) << "] Gen "
+             << setfill(' ') << " " << r.speciesName << ") "
+             << colorTypeTag(r.type1)
+             << (r.type2.empty() ? "" : " " + colorTypeTag(r.type2)) << " Gen "
              << r.generation << endl;
     }
     cout << results.size() << " found." << endl;
@@ -301,37 +295,29 @@ const vector<string> POKEMON_TYPES = {
     "Fighting", "Poison", "Ground", "Flying", "Psychic", "Bug",
     "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy"};
 
+void printTypeChoice(size_t index, const string &type, bool useTag)
+{
+    const size_t visibleWidth = type.size() + (useTag ? 2 : 0);
+    cout << right << setw(2) << (index + 1) << ". "
+         << (useTag ? colorTypeTag(type) : type);
+    if (visibleWidth < 14)
+        cout << string(14 - visibleWidth, ' ');
+}
+
 string chooseType()
 {
     cout << "\n--- SELECT TYPE ---" << endl;
     for (size_t i = 0; i < POKEMON_TYPES.size(); ++i)
     {
-        cout << right << setw(2) << (i + 1) << ". "
-             << left << setw(10) << POKEMON_TYPES[i];
+        printTypeChoice(i, POKEMON_TYPES[i], true);
         if ((i + 1) % 3 == 0)
             cout << endl;
     }
-    cout << right;
+    cout << right << endl;
     cout << " 0. Cancel" << endl;
-    cout << "Choice: ";
-
-    int pick = 0;
-    if (!(cin >> pick))
-    {
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "[ERROR] Invalid input." << endl;
-        return "";
-    }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
+    int pick = readMenuChoice("Choice: ", static_cast<int>(POKEMON_TYPES.size()));
     if (pick == 0)
         return "";
-    if (pick < 1 || pick > static_cast<int>(POKEMON_TYPES.size()))
-    {
-        cout << "[ERROR] Invalid type number." << endl;
-        return "";
-    }
     return POKEMON_TYPES[pick - 1];
 }
 
@@ -348,47 +334,13 @@ int chooseGeneration()
         cout << (i + 1) << ". " << GENERATION_LABELS[i] << endl;
     }
     cout << "0. Cancel" << endl;
-    cout << "Choice: ";
-
-    int pick = 0;
-    if (!(cin >> pick))
-    {
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "[ERROR] Invalid input." << endl;
-        return 0;
-    }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-    if (pick < 1 || pick > static_cast<int>(GENERATION_LABELS.size()))
-    {
-        if (pick != 0)
-            cout << "[ERROR] Invalid generation number." << endl;
-        return 0;
-    }
+    int pick = readMenuChoice("Choice: ", static_cast<int>(GENERATION_LABELS.size()));
     return pick;
 }
 
 int promptDexNumber()
 {
-    cout << "Enter Dex number (0 to cancel): ";
-
-    int dex = 0;
-    if (!(cin >> dex))
-    {
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "[ERROR] Please enter a number." << endl;
-        return 0;
-    }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
-    if (dex < 0)
-    {
-        cout << "[ERROR] Dex number must be positive." << endl;
-        return 0;
-    }
-    return dex;
+    return readNonNegativeNumber("Enter Dex number (0 to cancel): ");
 }
 
 string toLowerStr(string s)
@@ -400,17 +352,48 @@ string toLowerStr(string s)
 
 int readChoice()
 {
-    int v = 0;
-    if (!(cin >> v))
-    {
-        if (cin.eof())
-            return 0; // input closed: treat as back / exit
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    string line;
+    if (!getline(cin, line))
+        return 0;
+
+    istringstream input(line);
+    int value = 0;
+    if (!(input >> value) || !(input >> ws).eof())
         return -1;
+    return value;
+}
+
+int readMenuChoice(const string &prompt, int maxOption, bool allowZero)
+{
+    while (true)
+    {
+        cout << prompt;
+        const int choice = readChoice();
+        if (choice == 0 && cin.eof())
+            return 0;
+        if ((allowZero && choice == 0) || (choice >= 1 && choice <= maxOption))
+            return choice;
+
+        cout << "[ERROR] Invalid Choice." << endl;
     }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    return v;
+}
+
+int readNonNegativeNumber(const string &prompt)
+{
+    while (true)
+    {
+        cout << prompt;
+        const int number = readChoice();
+        if (number == 0 && cin.eof())
+            return 0;
+        if (number >= 0)
+            return number;
+
+        if (number == -1)
+            cout << "[ERROR] Please enter a number." << endl;
+        else
+            cout << "[ERROR] The number cannot be negative." << endl;
+    }
 }
 
 bool askYesNo(const string &prompt)
@@ -443,9 +426,8 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesD
     cout << "1. Save" << endl;
     cout << "2. Load" << endl;
     cout << "0. Back" << endl;
-    cout << "Choice: ";
-    int choice = readChoice();
-    if (!validChoice(choice, 2))
+    int choice = readMenuChoice("Choice: ", 2);
+    if (choice == 0)
         return;
 
     if (choice == 1)
@@ -470,38 +452,33 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesD
     }
 }
 
-int chooseSecondType()
+int chooseSecondType(const string &firstType)
 {
-    cout << "\n--- SELECT TYPE 2 ---" << endl;
-
     vector<string> options = POKEMON_TYPES;
     options.push_back("Any");
     options.push_back("Mono");
 
-    for (size_t i = 0; i < options.size(); ++i)
+    while (true)
     {
-        cout << right << setw(2) << (i + 1) << ". "
-             << left << setw(10) << options[i];
-        if ((i + 1) % 3 == 0)
-            cout << endl;
-    }
-    cout << right << endl;
-    cout << "(Any = any second type, Mono = single-type only)" << endl;
-    cout << " 0. Cancel" << endl;
-    cout << "Choice: ";
+        cout << "\n--- SELECT TYPE 2 ---" << endl;
+        for (size_t i = 0; i < options.size(); ++i)
+        {
+            printTypeChoice(i, options[i], i < POKEMON_TYPES.size());
+            if ((i + 1) % 3 == 0)
+                cout << endl;
+        }
+        cout << right << endl;
+        cout << "(Any = any second type, Mono = single-type only)" << endl;
+        cout << " 0. Cancel" << endl;
 
-    int pick = readChoice();
-    if (pick == -1)
-    {
-        cout << "[ERROR] Invalid input." << endl;
-        return 0;
+        const int pick = readMenuChoice("Choice: ", static_cast<int>(options.size()));
+        if (pick == 0 || pick > static_cast<int>(POKEMON_TYPES.size()))
+            return pick;
+        if (toLowerStr(options[pick - 1]) != toLowerStr(firstType))
+            return pick;
+
+        cout << "[ERROR] Type 2 must be different from Type 1." << endl;
     }
-    if (pick < 0 || pick > static_cast<int>(options.size()))
-    {
-        cout << "[ERROR] Invalid choice." << endl;
-        return 0;
-    }
-    return pick;
 }
 
 bool nameLess(const PokemonNode &a, const PokemonNode &b)
@@ -550,9 +527,8 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
     cout << "2. Party" << endl;
     cout << "0. Back" << endl;
-    cout << "Choice: ";
-    int target = readChoice();
-    if (!validChoice(target, 2))
+    int target = readMenuChoice("Choice: ", 2);
+    if (target == 0)
         return;
 
     DoublyLinkedList &list = (target == 1) ? pc.getCurrentList() : party;
@@ -567,18 +543,17 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "2. Type" << endl;
     cout << "3. Dex Number" << endl;
     cout << "0. Back" << endl;
-    cout << "Choice: ";
-    int field = readChoice();
-    if (!validChoice(field, 3))
+    int field = readMenuChoice("Choice: ", 3);
+    if (field == 0)
         return;
 
     if (field == 1)
     {
         cout << "\n1. Ascending (A-Z)" << endl;
         cout << "2. Descending (Z-A)" << endl;
-        cout << "Choice: ";
-        int dir = readChoice();
-        if (!validChoice(dir, 2))
+        cout << "0. Back" << endl;
+        int dir = readMenuChoice("Choice: ", 2);
+        if (dir == 0)
             return;
 
         if (dir == 1)
@@ -593,9 +568,9 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     {
         cout << "\n1. Ascending (Normal -> Fairy)" << endl;
         cout << "2. Descending (Fairy -> Normal)" << endl;
-        cout << "Choice: ";
-        int dir = readChoice();
-        if (!validChoice(dir, 2))
+        cout << "0. Back" << endl;
+        int dir = readMenuChoice("Choice: ", 2);
+        if (dir == 0)
             return;
 
         list.sort(typeOrder(dir == 2));
@@ -608,9 +583,9 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     {
         cout << "\n1. Ascending (low -> high)" << endl;
         cout << "2. Descending (high -> low)" << endl;
-        cout << "Choice: ";
-        int dir = readChoice();
-        if (!validChoice(dir, 2))
+        cout << "0. Back" << endl;
+        int dir = readMenuChoice("Choice: ", 2);
+        if (dir == 0)
             return;
 
         if (dir == 1)
@@ -647,8 +622,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 displayParty(party);
                 if (!party.isEmpty())
                 {
-                    cout << "Select Slot # to manage (0 to go back): ";
-                    int slot = readChoice();
+                    int slot = readMenuChoice("Select Slot # to manage (0 to go back): ",
+                                              party.getCount());
                     if (slot != 0)
                         handlePartySubMenu(party, pc, slot);
                 }
@@ -658,8 +633,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 pc.displayCurrentBox();
                 if (!pc.getCurrentList().isEmpty())
                 {
-                    cout << "Select Slot # to manage (0 to go back): ";
-                    int slot = readChoice();
+                    int slot = readMenuChoice("Select Slot # to manage (0 to go back): ",
+                                              pc.getCurrentList().getCount());
                     if (slot != 0)
                         handleBoxSubMenu(pc, party, slot);
                 }
@@ -671,22 +646,26 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 cout << "2. Rename Active Box" << endl;
                 cout << "3. View All Boxes Overview" << endl;
                 cout << "0. Back" << endl;
-                cout << "Choice: ";
-                int sub = readChoice();
-                if (!validChoice(sub, 3))
+                int sub = readMenuChoice("Choice: ", 3);
+                if (sub == 0)
                     continue;
 
                 if (sub == 1)
                 {
-                    cout << "Enter Box (1-30): ";
-                    int boxNum = readChoice();
+                    int boxNum = readMenuChoice("Enter Box (1-30): ", MAX_BOXES, false);
                     pc.switchBox(boxNum);
                 }
                 else if (sub == 2)
                 {
                     string name;
-                    cout << "New name: ";
-                    getline(cin, name);
+                    do
+                    {
+                        cout << "New name: ";
+                        if (!getline(cin, name))
+                            return;
+                        if (name.empty())
+                            cout << "[ERROR] Box name cannot be empty." << endl;
+                    } while (name.empty());
                     pc.renameCurrentBox(name);
                 }
                 else if (sub == 3)
@@ -702,9 +681,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 cout << "3. By generation" << endl;
                 cout << "4. By Dex number" << endl;
                 cout << "0. Back" << endl;
-                cout << "Choice: ";
-                int sub = readChoice();
-                if (!validChoice(sub, 4))
+                int sub = readMenuChoice("Choice: ", 4);
+                if (sub == 0)
                     continue;
 
                 string query;
@@ -719,24 +697,22 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     string type1 = chooseType();
                     if (!type1.empty())
                     {
-                        int second = chooseSecondType();
+                        int second = chooseSecondType(type1);
                         if (second >= 1 && second <= 18)
                         {
                             string type2 = POKEMON_TYPES[second - 1];
-                            if (toLowerStr(type2) == toLowerStr(type1))
-                                cout << "[ERROR] Type 2 must be different from Type 1." << endl;
-                            else
-                                printSearchResults("TYPE: " + type1 + "/" + type2 + " (either order)",
-                                                   pc.searchByTypePair(type1, type2));
+                            printSearchResults("TYPE: " + colorTypeTag(type1) + " / " +
+                                                   colorTypeTag(type2) + " (either order)",
+                                               pc.searchByTypePair(type1, type2));
                         }
                         else if (second == 19)
                         {
-                            printSearchResults("TYPE: " + type1 + " (any second type)",
+                            printSearchResults("TYPE: " + colorTypeTag(type1) + " (any second type)",
                                                pc.searchByType(type1));
                         }
                         else if (second == 20)
                         {
-                            printSearchResults("TYPE: " + type1 + " (single-type only)",
+                            printSearchResults("TYPE: " + colorTypeTag(type1) + " (single-type only)",
                                                pc.searchByMonoType(type1));
                         }
                     }
@@ -765,7 +741,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice != 0)
             {
-                cout << "[ERROR] Invalid choice." << endl;
+                cout << "[ERROR] Invalid Choice." << endl;
             }
         }
         else
@@ -856,14 +832,7 @@ int main()
             cout << "3. View Party" << endl;
             cout << "4. Save / Load" << endl;
             cout << "0. Exit" << endl;
-            cout << "Select option: ";
-
-            choice = readChoice();
-            if (choice == -1)
-            {
-                cout << "[ERROR] Enter 1, 2, 3, 4, or 0." << endl;
-                continue;
-            }
+            choice = readMenuChoice("Select option: ", 4);
 
             if (choice == 1)
             {
@@ -880,10 +849,6 @@ int main()
             else if (choice == 4)
             {
                 handleSaveMenu(pc, party, pokedex);
-            }
-            else if (choice != 0)
-            {
-                cout << "[ERROR] Enter 1, 2, 3, 4, or 0." << endl;
             }
         }
 
