@@ -104,6 +104,34 @@ PokemonNode *getPokemonAtPosition(const DoublyLinkedList &list, int position)
     return pokemon;
 }
 
+void changePokemonNickname(PokemonNode *pokemon)
+{
+    if (pokemon == nullptr)
+    {
+        cout << "[ERROR] Could not find that Pokémon." << endl;
+        return;
+    }
+
+    cout << "Current nickname: " << pokemon->nickname << endl;
+    cout << "Enter a new nickname (blank to cancel): ";
+    string nickname;
+    if (!getline(cin, nickname))
+    {
+        cout << "[INPUT] Could not read the nickname; no changes were made." << endl;
+        return;
+    }
+
+    if (nickname.find_first_not_of(" \t") == string::npos)
+    {
+        cout << "Nickname change cancelled." << endl;
+        return;
+    }
+
+    const string oldNickname = pokemon->nickname;
+    pokemon->nickname = nickname;
+    cout << "[SUCCESS] Renamed " << oldNickname << " to " << pokemon->nickname << "." << endl;
+}
+
 void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
 {
     if (slot < 1 || slot > party.getCount())
@@ -117,8 +145,9 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     cout << "2. Swap Position in Party" << endl;
     cout << "3. Release Pokémon" << endl;
     cout << "4. View Pokémon Summary" << endl;
+    cout << "5. Change Nickname" << endl;
     cout << "0. Cancel" << endl;
-    int action = readMenuChoice("Choice: ", 4);
+    int action = readMenuChoice("Choice: ", 5);
     if (action == 0)
         return;
 
@@ -190,6 +219,10 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     {
         printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
     }
+    else if (action == 5)
+    {
+        changePokemonNickname(getPokemonAtPosition(party, slot));
+    }
 }
 
 void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
@@ -207,8 +240,9 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     cout << "3. Move to another Box" << endl;
     cout << "4. Release Pokémon" << endl;
     cout << "5. View Pokémon Summary" << endl;
+    cout << "6. Change Nickname" << endl;
     cout << "0. Cancel" << endl;
-    int action = readMenuChoice("Choice: ", 5);
+    int action = readMenuChoice("Choice: ", 6);
     if (action == 0)
         return;
 
@@ -287,6 +321,10 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     else if (action == 5)
     {
         printPokemonSummary(getPokemonAtPosition(boxList, slot), true, true);
+    }
+    else if (action == 6)
+    {
+        changePokemonNickname(getPokemonAtPosition(boxList, slot));
     }
 }
 

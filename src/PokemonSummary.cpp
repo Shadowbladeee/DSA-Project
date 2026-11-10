@@ -1,6 +1,7 @@
 #include "../include/PokemonSummary.h"
 #include "../include/TypeTags.h"
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <cctype>
 #include <string>
@@ -195,7 +196,17 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
 
     if (showSprite)
     {
-        string spritePath = "assets/sprites/" + to_string(species->internalID) + ".png";
+        const string spriteFolder = pokemon->isShiny ? "assets/spritesShiny/" : "assets/sprites/";
+        const string formSprite = spriteFolder + to_string(species->internalID) + ".png";
+        const string baseSprite = spriteFolder + to_string(species->pokedexID) + ".png";
+        const string fallbackSprite = spriteFolder + "0.png";
+        string spritePath = fallbackSprite;
+
+        if (ifstream(formSprite, ios::binary).good())
+            spritePath = formSprite;
+        else if (ifstream(baseSprite, ios::binary).good())
+            spritePath = baseSprite;
+
         cout << "\n";
         renderAutoCenteredSprite(spritePath);
     }
