@@ -3,12 +3,13 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 using namespace std;
 
 namespace
 {
-const int SAVE_VERSION = 2;
+const int SAVE_VERSION = 4;
 
 struct SavedPokemon
 {
@@ -90,7 +91,8 @@ bool saveFileExists(const string &filename)
     return f.good();
 }
 
-bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party)
+bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
+              const set<int> &registeredSpecies, const set<int> &encounteredSpecies)
 {
     const string tmpName = filename + ".tmp";
 
@@ -106,6 +108,11 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party)
         out << "CURRENT_BOX," << (pc.getCurrentBoxIndex() + 1) << "\n";
         for (int b = 1; b <= MAX_BOXES; ++b)
             out << "BOXNAME," << b << "," << quote(pc.getBoxName(b)) << "\n";
+
+        for (int id : registeredSpecies)
+            out << "POKEDEX," << id << "\n";
+        for (int id : encounteredSpecies)
+            out << "ENCOUNTERED," << id << "\n";
 
         writeList(out, 0, party);
         for (int b = 1; b <= MAX_BOXES; ++b)
@@ -129,7 +136,8 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party)
 }
 
 bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
-              const vector<SpeciesData *> &pokedex, int maxPartySize)
+              const vector<SpeciesData *> &pokedex, int maxPartySize,
+              set<int> &registeredSpecies, set<int> &encounteredSpecies)
 {
     ifstream in(filename);
     if (!in.is_open())
@@ -146,6 +154,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         boxNames[b] = "Box " + to_string(b);
     vector<SavedPokemon> saved;
     vector<int> counts(MAX_BOXES + 1, 0); // index 0 = party
+    set<int> loadedRegistrations;
+    set<int> loadedEncounters;
 
     string line;
     int lineNo = 0;
@@ -166,7 +176,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
 
         if (tag == "VERSION")
         {
-            if (t.size() != 2 || !toInt(t[1], version) || (version != 1 && version != 2))
+            if (t.size() != 2 || !toInt(t[1], version) ||
+                (version < 1 || version > SAVE_VERSION))
                 return fail("unsupported version");
             sawVersion = true;
         }
@@ -186,6 +197,23 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
             if (t.size() != 3 || !toInt(t[1], b) || b < 1 || b > MAX_BOXES || t[2].empty())
                 return fail("bad BOXNAME");
             boxNames[b] = t[2];
+        }
+        else if (tag == "POKEDEX")
+        {
+            int id = 0;
+            if (version < 3 || t.size() != 2 || !toInt(t[1], id) ||
+                findByInternalID(pokedex, id) == nullptr)
+                return fail("bad POKEDEX record");
+            loadedRegistrations.insert(id);
+            loadedEncounters.insert(id);
+        }
+        else if (tag == "ENCOUNTERED")
+        {
+            int id = 0;
+            if (version < 4 || t.size() != 2 || !toInt(t[1], id) ||
+                findByInternalID(pokedex, id) == nullptr)
+                return fail("bad ENCOUNTERED record");
+            loadedEncounters.insert(id);
         }
         else if (tag == "POKEMON")
         {
@@ -207,6 +235,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
                 return fail(loc == 0 ? "too many Pokémon in the party" : "box over capacity");
 
             saved.push_back({loc, species, t[3], t[4], level, t[6], t[7], shiny == 1, t[9]});
+            loadedRegistrations.insert(species->internalID);
+            loadedEncounters.insert(species->internalID);
         }
         else
         {
@@ -232,5 +262,7 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     }
 
     pc.setCurrentBox(currentBox);
+    registeredSpecies = std::move(loadedRegistrations);
+    encounteredSpecies = std::move(loadedEncounters);
     return true;
 }

@@ -12,7 +12,9 @@
 #include <functional>
 #include <algorithm>
 #include <cctype>
+#include <set>
 #include <sstream>
+#include <utility>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -59,6 +61,19 @@ int readMenuChoice(const string &prompt, int maxOption, bool allowZero = true);
 int readNonNegativeNumber(const string &prompt);
 bool askYesNo(const string &prompt);
 void displayParty(const DoublyLinkedList &party);
+
+void registerListSpecies(set<int> &registeredSpecies, set<int> &encounteredSpecies,
+                         const DoublyLinkedList &list)
+{
+    for (const PokemonNode *pokemon = list.getHead(); pokemon != nullptr; pokemon = pokemon->next)
+    {
+        if (pokemon->species != nullptr)
+        {
+            registeredSpecies.insert(pokemon->species->internalID);
+            encounteredSpecies.insert(pokemon->species->internalID);
+        }
+    }
+}
 
 const PokemonNode *nodeAt(const DoublyLinkedList &list, int position)
 {
@@ -475,7 +490,9 @@ bool askYesNo(const string &prompt)
     }
 }
 
-void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesData *> &pokedex)
+void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
+                    const vector<SpeciesData *> &pokedex, set<int> &registeredSpecies,
+                    set<int> &encounteredSpecies)
 {
     clearScreen();
     cout << "\n--- SAVE / LOAD ---" << endl;
@@ -491,7 +508,7 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesD
         clearScreen();
         cout << "Saving game..." << endl;
         timeDelay(500);
-        if (saveGame(SAVE_FILE, pc, party))
+        if (saveGame(SAVE_FILE, pc, party, registeredSpecies, encounteredSpecies))
         {
             cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;
             waitForContinue();
@@ -512,7 +529,8 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party, const vector<SpeciesD
         clearScreen();
         cout << "Loading game..." << endl;
         timeDelay(500);
-        if (loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE))
+        if (loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE,
+                     registeredSpecies, encounteredSpecies))
         {
             cout << "[SUCCESS] Loaded " << SAVE_FILE << "." << endl;
             waitForContinue();
@@ -525,6 +543,7 @@ int chooseSecondType(const string &firstType)
     vector<string> options = POKEMON_TYPES;
     options.push_back("Any");
     options.push_back("Mono");
+    string error;
 
     while (true)
     {
@@ -538,6 +557,8 @@ int chooseSecondType(const string &firstType)
         }
         cout << right << endl;
         cout << "(Any = any second type, Mono = single-type only)" << endl;
+        if (!error.empty())
+            cout << "[ERROR] " << error << endl;
         cout << " 0. Cancel" << endl;
 
         const int pick = readMenuChoice("Choice: ", static_cast<int>(options.size()));
@@ -546,7 +567,7 @@ int chooseSecondType(const string &firstType)
         if (toLowerStr(options[pick - 1]) != toLowerStr(firstType))
             return pick;
 
-        cout << "[ERROR] Type 2 must be different from Type 1." << endl;
+        error = "Type 2 must differ from Type 1. Choose Mono for a single-type Pokémon.";
     }
 }
 
@@ -864,6 +885,340 @@ void printBoxOverview(PCSystem &pc)
     waitForContinue();
 }
 
+void showPokedexCompletion(const vector<SpeciesData *> &pokedex,
+                           const set<int> &registeredSpecies)
+{
+    int totalByGeneration[10] = {};
+    int registeredByGeneration[10] = {};
+    int totalRegistered = 0;
+
+    for (const SpeciesData *species : pokedex)
+    {
+        if (species == nullptr)
+            continue;
+
+        ++totalByGeneration[species->generation >= 1 && species->generation <= 9
+                                ? species->generation
+                                : 0];
+        if (registeredSpecies.count(species->internalID) != 0)
+        {
+            ++totalRegistered;
+            if (species->generation >= 1 && species->generation <= 9)
+                ++registeredByGeneration[species->generation];
+        }
+    }
+
+    const double overallPercent = pokedex.empty()
+                                      ? 0.0
+                                      : 100.0 * totalRegistered / pokedex.size();
+
+    clearScreen();
+    cout << "\n=== POKÉDEX COMPLETION ===" << endl;
+    cout << "Overall: " << totalRegistered << "/" << pokedex.size()
+         << " (" << fixed << setprecision(1) << overallPercent << "%)" << endl;
+    cout << fillBar(totalRegistered, static_cast<int>(pokedex.size()), 30) << endl;
+
+    for (int generation = 1; generation <= 9; ++generation)
+    {
+        if (totalByGeneration[generation] == 0)
+            continue;
+
+        const double percent = 100.0 * registeredByGeneration[generation] /
+                               totalByGeneration[generation];
+        cout << GENERATION_LABELS[generation - 1] << ": "
+             << registeredByGeneration[generation] << "/" << totalByGeneration[generation]
+             << " (" << fixed << setprecision(1) << percent << "%)" << endl;
+    }
+    waitForContinue();
+}
+
+vector<const SpeciesData *> getSortedPokedexEntries(const vector<SpeciesData *> &pokedex)
+{
+    vector<const SpeciesData *> entries;
+    entries.reserve(pokedex.size());
+    for (const SpeciesData *species : pokedex)
+    {
+        if (species != nullptr)
+            entries.push_back(species);
+    }
+
+    sort(entries.begin(), entries.end(), [](const SpeciesData *a, const SpeciesData *b) {
+        if (a->pokedexID != b->pokedexID)
+            return a->pokedexID < b->pokedexID;
+        return a->internalID < b->internalID;
+    });
+
+    return entries;
+}
+
+void browsePokedexForms(const SpeciesData *selected,
+                        const vector<SpeciesData *> &pokedex,
+                        const set<int> &registeredSpecies,
+                        const set<int> &encounteredSpecies)
+{
+    vector<const SpeciesData *> forms;
+    for (const SpeciesData *species : pokedex)
+    {
+        if (species != nullptr && species->pokedexID == selected->pokedexID)
+            forms.push_back(species);
+    }
+    sort(forms.begin(), forms.end(), [](const SpeciesData *a, const SpeciesData *b) {
+        return a->internalID < b->internalID;
+    });
+
+    size_t formIndex = 0;
+    for (size_t i = 0; i < forms.size(); ++i)
+    {
+        if (forms[i]->internalID == selected->internalID)
+        {
+            formIndex = i;
+            break;
+        }
+    }
+
+    while (true)
+    {
+        const SpeciesData *form = forms[formIndex];
+        const bool encountered = encounteredSpecies.count(form->internalID) != 0;
+        const bool caught = registeredSpecies.count(form->internalID) != 0;
+        printSpeciesSummary(form, encountered, caught, encountered, false);
+
+        if (forms.size() > 1)
+            cout << "\nForm " << (formIndex + 1) << "/" << forms.size()
+                 << " | N = next form | P = previous form" << endl;
+        const int navigation = readSlotOrNav(
+            forms.size() > 1 ? "N = next form | P = previous form | 0 = back: "
+                             : "0 = back: ",
+            0);
+        if (navigation == 0)
+            return;
+        if (navigation == NAV_NEXT)
+            formIndex = (formIndex + 1) % forms.size();
+        else if (navigation == NAV_PREV)
+            formIndex = (formIndex + forms.size() - 1) % forms.size();
+        else
+            cout << "[ERROR] Invalid Choice." << endl;
+    }
+}
+
+void browsePokedexEntries(vector<const SpeciesData *> entries,
+                          const vector<SpeciesData *> &pokedex,
+                          const set<int> &registeredSpecies,
+                          const set<int> &encounteredSpecies, const string &title)
+{
+    const size_t pageSize = 20;
+    size_t page = 0;
+    while (true)
+    {
+        clearScreen();
+        const size_t pageStart = page * pageSize;
+        const size_t pageEnd = min(entries.size(), pageStart + pageSize);
+        cout << "\n=== " << title << " (" << entries.size() << " entries) ===" << endl;
+        if (entries.empty())
+        {
+            cout << "(No matches)" << endl;
+            waitForContinue();
+            return;
+        }
+        cout << "Page " << (page + 1) << "/" << ((entries.size() + pageSize - 1) / pageSize)
+             << " | C = caught, S = seen, - = unseen" << endl;
+
+        for (size_t i = pageStart; i < pageEnd; ++i)
+        {
+            const SpeciesData *species = entries[i];
+            const size_t slot = i - pageStart + 1;
+            const bool isRegistered = registeredSpecies.count(species->internalID) != 0;
+            const bool isEncountered = encounteredSpecies.count(species->internalID) != 0;
+            cout << setw(2) << slot << ". #"
+                 << right << setfill('0') << setw(3) << species->pokedexID << setfill(' ')
+                 << " " << (isEncountered ? species->name : "???");
+            if (isRegistered)
+                cout << " " << colorTypeTag(species->type1)
+                     << (species->type2.empty() ? "" : " " + colorTypeTag(species->type2))
+                     << " \033[92m[C]\033[0m";
+            else if (isEncountered)
+                cout << " \033[93m[S]\033[0m";
+            else
+                cout << " \033[90m[-]\033[0m";
+            cout
+                 << endl;
+        }
+
+        const int selection = readSlotOrNav(
+            "Entry # to view | N = next | P = previous | 0 = back: ",
+            static_cast<int>(pageEnd - pageStart));
+        if (selection == 0)
+            return;
+        if (selection == NAV_NEXT)
+        {
+            if (pageEnd < entries.size())
+                ++page;
+            else
+                cout << "[ERROR] Already on the last page." << endl;
+            continue;
+        }
+        if (selection == NAV_PREV)
+        {
+            if (page > 0)
+                --page;
+            else
+                cout << "[ERROR] Already on the first page." << endl;
+            continue;
+        }
+        if (selection == NAV_GRID)
+        {
+            cout << "[ERROR] Invalid Choice." << endl;
+            continue;
+        }
+
+        const SpeciesData *selected = entries[pageStart + static_cast<size_t>(selection - 1)];
+        browsePokedexForms(selected, pokedex, registeredSpecies, encounteredSpecies);
+    }
+}
+
+void searchPokedex(const vector<SpeciesData *> &pokedex,
+                   const set<int> &registeredSpecies,
+                   const set<int> &encounteredSpecies)
+{
+    clearScreen();
+    cout << "\n--- SEARCH POKÉDEX ---" << endl;
+    cout << "1. By nickname / species" << endl;
+    cout << "2. By type" << endl;
+    cout << "3. By generation" << endl;
+    cout << "4. By Dex number" << endl;
+    cout << "0. Back" << endl;
+    const int choice = readMenuChoice("Choice: ", 4);
+    if (choice == 0)
+        return;
+
+    vector<const SpeciesData *> matches;
+    string title;
+    const vector<const SpeciesData *> entries = getSortedPokedexEntries(pokedex);
+
+    if (choice == 1)
+    {
+        string query;
+        cout << "Enter nickname or species: ";
+        if (!getline(cin, query))
+            return;
+        const string normalizedQuery = toLowerStr(query);
+        title = "POKÉDEX SEARCH: \"" + query + "\"";
+        if (!normalizedQuery.empty())
+        {
+            for (const SpeciesData *species : entries)
+            {
+                if (toLowerStr(species->name).find(normalizedQuery) != string::npos)
+                    matches.push_back(species);
+            }
+        }
+    }
+    else if (choice == 2)
+    {
+        const string type1 = chooseType();
+        if (type1.empty())
+            return;
+        const int second = chooseSecondType(type1);
+        if (second == 0)
+            return;
+
+        title = "POKÉDEX TYPE: " + colorTypeTag(type1);
+        if (second >= 1 && second <= static_cast<int>(POKEMON_TYPES.size()))
+        {
+            const string type2 = POKEMON_TYPES[second - 1];
+            title += " / " + colorTypeTag(type2) + " (either order)";
+            for (const SpeciesData *species : entries)
+            {
+                const bool pairMatches =
+                    (toLowerStr(species->type1) == toLowerStr(type1) &&
+                     toLowerStr(species->type2) == toLowerStr(type2)) ||
+                    (toLowerStr(species->type1) == toLowerStr(type2) &&
+                     toLowerStr(species->type2) == toLowerStr(type1));
+                if (pairMatches)
+                    matches.push_back(species);
+            }
+        }
+        else if (second == static_cast<int>(POKEMON_TYPES.size()) + 1)
+        {
+            title += " (any second type)";
+            for (const SpeciesData *species : entries)
+            {
+                if (toLowerStr(species->type1) == toLowerStr(type1) ||
+                    toLowerStr(species->type2) == toLowerStr(type1))
+                    matches.push_back(species);
+            }
+        }
+        else
+        {
+            title += " (single-type only)";
+            for (const SpeciesData *species : entries)
+            {
+                if (toLowerStr(species->type1) == toLowerStr(type1) &&
+                    species->type2.empty())
+                    matches.push_back(species);
+            }
+        }
+    }
+    else if (choice == 3)
+    {
+        const int generation = chooseGeneration();
+        if (generation == 0)
+            return;
+        title = "POKÉDEX GENERATION: " + GENERATION_LABELS[generation - 1];
+        for (const SpeciesData *species : entries)
+        {
+            if (species->generation == generation)
+                matches.push_back(species);
+        }
+    }
+    else
+    {
+        const int dexNumber = promptDexNumber();
+        if (dexNumber == 0)
+            return;
+        title = "POKÉDEX DEX #" + to_string(dexNumber);
+        for (const SpeciesData *species : entries)
+        {
+            if (species->pokedexID == dexNumber)
+                matches.push_back(species);
+        }
+    }
+
+    browsePokedexEntries(std::move(matches), pokedex, registeredSpecies,
+                         encounteredSpecies, title);
+}
+
+void browsePokedex(const vector<SpeciesData *> &pokedex,
+                   const set<int> &registeredSpecies,
+                   const set<int> &encounteredSpecies)
+{
+    browsePokedexEntries(getSortedPokedexEntries(pokedex), pokedex,
+                         registeredSpecies, encounteredSpecies, "POKÉDEX");
+}
+
+void handlePokedexMenu(const vector<SpeciesData *> &pokedex,
+                       const set<int> &registeredSpecies,
+                       const set<int> &encounteredSpecies)
+{
+    while (true)
+    {
+        clearScreen();
+        cout << "\n=== POKÉDEX ===" << endl;
+        cout << "1. Completion" << endl;
+        cout << "2. Browse entries" << endl;
+        cout << "3. Search entries" << endl;
+        cout << "0. Back" << endl;
+        const int choice = readMenuChoice("Choice: ", 3);
+        if (choice == 0)
+            return;
+        if (choice == 1)
+            showPokedexCompletion(pokedex, registeredSpecies);
+        else if (choice == 2)
+            browsePokedex(pokedex, registeredSpecies, encounteredSpecies);
+        else
+            searchPokedex(pokedex, registeredSpecies, encounteredSpecies);
+    }
+}
+
 void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
 {
     int choice = -1;
@@ -878,9 +1233,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "4. Search Pokémon in PC" << endl;
         cout << "5. Sort Pokémon" << endl;
         cout << "0. Back" << endl;
-        cout << "Select option: ";
 
-        choice = readChoice();
+        choice = readMenuChoice("Select option: ", 5);
         if (choice != -1)
         {
             if (choice == 1)
@@ -1051,11 +1405,14 @@ int main()
     {
         PCSystem pc;
         DoublyLinkedList party;
+        set<int> registeredSpecies;
+        set<int> encounteredSpecies;
 
         bool loaded = false;
         if (saveFileExists(SAVE_FILE))
         {
-            loaded = loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE);
+            loaded = loadGame(SAVE_FILE, pc, party, pokedex, MAX_PARTY_SIZE,
+                              registeredSpecies, encounteredSpecies);
             if (loaded)
                 cout << "[INFO] Loaded " << SAVE_FILE << "." << endl;
         }
@@ -1097,6 +1454,10 @@ int main()
             const SpeciesData *meowth = getSpeciesByPokedexNumber(pokedex, 52);
             if (meowth)
                 pc.getCurrentList().append(meowth, "meowth", "Male", 50, "Pickup", "Technician", false, "2026-11-06");
+
+            registerListSpecies(registeredSpecies, encounteredSpecies, party);
+            for (int box = 1; box <= MAX_BOXES; ++box)
+                registerListSpecies(registeredSpecies, encounteredSpecies, pc.getList(box));
         }
         
         int choice = -1;
@@ -1108,12 +1469,13 @@ int main()
             cout << "2. View PC" << endl;
             cout << "3. View Party" << endl;
             cout << "4. Save / Load" << endl;
+            cout << "5. Pokédex" << endl;
             cout << "0. Exit" << endl;
-            choice = readMenuChoice("Select option: ", 4);
+            choice = readMenuChoice("Select option: ", 5);
 
             if (choice == 1)
             {
-                startExpedition(pokedex, party, pc);
+                startExpedition(pokedex, party, pc, registeredSpecies, encounteredSpecies);
             }
             else if (choice == 2)
             {
@@ -1126,13 +1488,17 @@ int main()
             }
             else if (choice == 4)
             {
-                handleSaveMenu(pc, party, pokedex);
+                handleSaveMenu(pc, party, pokedex, registeredSpecies, encounteredSpecies);
+            }
+            else if (choice == 5)
+            {
+                handlePokedexMenu(pokedex, registeredSpecies, encounteredSpecies);
             }
         }
 
         if (askYesNo("Save before exiting?"))
         {
-            if (saveGame(SAVE_FILE, pc, party))
+            if (saveGame(SAVE_FILE, pc, party, registeredSpecies, encounteredSpecies))
                 cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;
         }
     }

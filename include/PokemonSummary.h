@@ -8,5 +8,7 @@ void renderAutoCenteredSprite(const std::string &filepath, int targetBoxWidth = 
 void playPokemonCry(int pokedexID);
 std::string formatAbilities(std::string abilitiesStr);
 void printPokemonSummary(const PokemonNode *pokemon, bool playCry = false, bool showSprite = false);
+void printSpeciesSummary(const SpeciesData *species, bool encountered, bool caught,
+                         bool showSprite = false, bool waitForContinue = true);
 
 #endif
