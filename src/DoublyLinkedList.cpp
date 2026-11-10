@@ -1,4 +1,5 @@
 #include "../include/DoublyLinkedList.h"
+#include "../include/TypeTags.h"
 #include <iostream>
 #include <iomanip>
 
@@ -70,9 +71,9 @@ void DoublyLinkedList::displayBox() const
         cout << slot << ": " << current->nickname
         << " (#" << right << setfill('0') << setw(3) << current->species->pokedexID
         << setfill(' ') << " " << current->species->name
-        << ") [" << current->species->type1
-        << (current->species->type2.empty() ? "" : "/" + current->species->type2)
-        << "] - Lv. " << current->level << endl;
+        << ") " << colorTypeTag(current->species->type1)
+        << (current->species->type2.empty() ? "" : " " + colorTypeTag(current->species->type2))
+        << " - Lv. " << current->level << endl;
         current = current->next;
         slot++;
     }

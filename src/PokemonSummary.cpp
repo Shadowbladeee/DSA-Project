@@ -1,4 +1,5 @@
 #include "../include/PokemonSummary.h"
+#include "../include/TypeTags.h"
 #include <iostream>
 #include <iomanip>
 #include <cctype>
@@ -205,10 +206,10 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
     {
         cout << " (" << toTitleCase(species->genus) << ")";
     }
-    cout << "\n  Type: " << toTitleCase(species->type1);
+    cout << "\n  Type: " << colorTypeTag(species->type1);
     if (!species->type2.empty())
     {
-        cout << " / " << toTitleCase(species->type2);
+        cout << " " << colorTypeTag(species->type2);
     }
     cout << "\n====================================================================\n";
 
