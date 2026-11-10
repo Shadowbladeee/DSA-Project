@@ -112,14 +112,23 @@ int main()
         while (choice != 0)
         {
             clearScreen();
-            cout << "\n=== POKEMON ADVENTURE ===" << endl;
-            cout << "1. Start an Expedition" << endl;
-            cout << "2. View Party" << endl;
-            cout << "3. View PC" << endl;
-            cout << "4. Pokédex" << endl;
-            cout << "5. Save / Load" << endl;
-            cout << "0. Exit" << endl;
-            choice = readMenuChoice("Select option: ", 5);
+            cout << "\n╔══════════════════════════════════════╗" << endl;
+            cout << "║          POKÉMON ADVENTURE           ║" << endl;
+            cout << "╚══════════════════════════════════════╝" << endl;
+            cout << " Party: " << party.getCount() << "/" << MAX_PARTY_SIZE
+                 << "       Active Box: " << pc.getCurrentBoxNumber() << "/"
+                 << MAX_BOXES << endl;
+            cout << " Save: " << (saveFileExists(SAVE_FILE) ? "Available" : "Not found") << endl;
+            cout << "\n  ADVENTURE" << endl;
+            cout << "  1. Start an Expedition" << endl;
+            cout << "\n  MANAGEMENT" << endl;
+            cout << "  2. View Party" << endl;
+            cout << "  3. View PC" << endl;
+            cout << "  4. Pokédex" << endl;
+            cout << "\n  SYSTEM" << endl;
+            cout << "  5. Save / Load" << endl;
+            cout << "  0. Exit" << endl;
+            choice = readMenuChoice("\nSelect option: ", 5);
 
             if (choice == 1)
             {

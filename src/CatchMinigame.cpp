@@ -176,7 +176,7 @@ namespace
         string line;
         while (true)
         {
-            cout << prompt;
+            cout << "\n" << prompt;
             if (!getline(cin, line))
                 return false;
 

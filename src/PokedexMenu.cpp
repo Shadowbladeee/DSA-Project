@@ -18,7 +18,7 @@ constexpr int MAX_POKEDEX_NUMBER = 1025;
 
 int promptPokedexNumber()
 {
-    return readMenuChoice("Enter Dex number (1-1025, 0 to cancel): ",
+    return readMenuChoice("\nEnter Dex number (1-1025, 0 to cancel): ",
                           MAX_POKEDEX_NUMBER);
 }
 } // namespace
@@ -385,7 +385,7 @@ void searchPokedex(const vector<SpeciesData *> &pokedex,
     cout << "2. By type" << endl;
     cout << "3. By generation" << endl;
     cout << "0. Back" << endl;
-    const int choice = readMenuChoice("Choice: ", 3);
+    const int choice = readMenuChoice("\nChoice: ", 3);
     if (choice == 0)
         return;
 
@@ -493,7 +493,7 @@ void handlePokedexMenu(const vector<SpeciesData *> &pokedex,
         cout << "3. Search entries" << endl;
         cout << "4. Go to Dex number" << endl;
         cout << "0. Back" << endl;
-        const int choice = readMenuChoice("Choice: ", 4);
+        const int choice = readMenuChoice("\nChoice: ", 4);
         if (choice == 0)
             return;
         if (choice == 1)

@@ -82,7 +82,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         cout << "4. View Pokédex Entry" << endl;
         cout << "5. Release Pokémon" << endl;
         cout << "0. Cancel" << endl;
-        int action = readMenuChoice("Choice: ", 5);
+        int action = readMenuChoice("\nChoice: ", 5);
         if (action == 0)
             break;
 
@@ -118,7 +118,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
                 waitForContinue();
                 continue;
             }
-            int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+            int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
                                            party.getCount());
             if (targetPos == 0)
                 continue;
@@ -203,7 +203,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &pc)
             cout << "2. Change Nickname" << endl;
             cout << "3. View Pokédex Entry" << endl;
             cout << "0. Cancel" << endl;
-            int action = readMenuChoice("Choice: ", 3);
+            int action = readMenuChoice("\nChoice: ", 3);
             if (action == 0)
                 break;
 
@@ -216,7 +216,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &pc)
                     waitForContinue();
                     continue;
                 }
-                int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+                int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
                                                party.getCount());
                 if (targetPos == 0)
                     continue;
@@ -279,7 +279,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         cout << "5. View Pokédex Entry" << endl;
         cout << "6. Release Pokémon" << endl;
         cout << "0. Cancel" << endl;
-        int action = readMenuChoice("Choice: ", 6);
+        int action = readMenuChoice("\nChoice: ", 6);
         if (action == 0)
             break;
 
@@ -309,7 +309,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
                 waitForContinue();
                 continue;
             }
-            int targetPos = readMenuChoice("Swap slot " + to_string(slot) + " with slot # (0 to cancel): ",
+            int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
                                            boxList.getCount());
             if (targetPos == 0)
                 continue;
@@ -325,7 +325,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         }
         else if (action == 3)
         {
-            int targetBox = readMenuChoice("Enter Target Box (1-30): ", MAX_BOXES, false);
+            int targetBox = readMenuChoice("\nEnter Target Box (1-30): ", MAX_BOXES, false);
             int srcBox = pc.getCurrentBoxNumber();
             if (targetBox == srcBox)
             {
@@ -456,7 +456,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
     cout << "2. Party" << endl;
     cout << "0. Back" << endl;
-    int target = readMenuChoice("Choice: ", 2);
+    int target = readMenuChoice("\nChoice: ", 2);
     if (target == 0)
         return;
 
@@ -474,7 +474,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "2. Type" << endl;
     cout << "3. Dex Number" << endl;
     cout << "0. Back" << endl;
-    int field = readMenuChoice("Choice: ", 3);
+    int field = readMenuChoice("\nChoice: ", 3);
     if (field == 0)
         return;
 
@@ -484,7 +484,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "\n1. Ascending (A-Z)" << endl;
         cout << "2. Descending (Z-A)" << endl;
         cout << "0. Back" << endl;
-        int dir = readMenuChoice("Choice: ", 2);
+        int dir = readMenuChoice("\nChoice: ", 2);
         if (dir == 0)
             return;
 
@@ -504,7 +504,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "\n1. Ascending (Normal -> Fairy)" << endl;
         cout << "2. Descending (Fairy -> Normal)" << endl;
         cout << "0. Back" << endl;
-        int dir = readMenuChoice("Choice: ", 2);
+        int dir = readMenuChoice("\nChoice: ", 2);
         if (dir == 0)
             return;
 
@@ -522,7 +522,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "\n1. Ascending (low -> high)" << endl;
         cout << "2. Descending (high -> low)" << endl;
         cout << "0. Back" << endl;
-        int dir = readMenuChoice("Choice: ", 2);
+        int dir = readMenuChoice("\nChoice: ", 2);
         if (dir == 0)
             return;
 
@@ -707,7 +707,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "5. Sort Pokémon" << endl;
         cout << "0. Back" << endl;
 
-        choice = readMenuChoice("Select option: ", 5);
+        choice = readMenuChoice("\nSelect option: ", 5);
         if (choice != -1)
         {
             if (choice == 1)
@@ -767,13 +767,13 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 cout << "2. Rename Active Box" << endl;
                 cout << "3. View All Boxes Overview" << endl;
                 cout << "0. Back" << endl;
-                int sub = readMenuChoice("Choice: ", 3);
+                int sub = readMenuChoice("\nChoice: ", 3);
                 if (sub == 0)
                     continue;
 
                 if (sub == 1)
                 {
-                    int boxNum = readMenuChoice("Enter Box (1-30): ", MAX_BOXES, false);
+                    int boxNum = readMenuChoice("\nEnter Box (1-30): ", MAX_BOXES, false);
                     pc.switchBox(boxNum);
                     waitForContinue();
                 }
@@ -805,7 +805,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 cout << "3. By generation" << endl;
                 cout << "4. By Dex number" << endl;
                 cout << "0. Back" << endl;
-                int sub = readMenuChoice("Choice: ", 4);
+                int sub = readMenuChoice("\nChoice: ", 4);
                 if (sub == 0)
                     continue;
 

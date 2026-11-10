@@ -50,7 +50,7 @@ string chooseType()
     }
     cout << right << endl;
     cout << " 0. Cancel" << endl;
-    int pick = readMenuChoice("Choice: ", static_cast<int>(POKEMON_TYPES.size()));
+    int pick = readMenuChoice("\nChoice: ", static_cast<int>(POKEMON_TYPES.size()));
     if (pick == 0)
         return "";
     return POKEMON_TYPES[pick - 1];
@@ -70,13 +70,13 @@ int chooseGeneration()
         cout << (i + 1) << ". " << GENERATION_LABELS[i] << endl;
     }
     cout << "0. Cancel" << endl;
-    int pick = readMenuChoice("Choice: ", static_cast<int>(GENERATION_LABELS.size()));
+    int pick = readMenuChoice("\nChoice: ", static_cast<int>(GENERATION_LABELS.size()));
     return pick;
 }
 
 int promptDexNumber()
 {
-    return readNonNegativeNumber("Enter Dex number (0 to cancel): ");
+    return readNonNegativeNumber("\nEnter Dex number (0 to cancel): ");
 }
 
 string toLowerStr(string s)
@@ -180,7 +180,7 @@ int chooseSecondType(const string &firstType)
             cout << "[ERROR] " << error << endl;
         cout << " 0. Cancel" << endl;
 
-        const int pick = readMenuChoice("Choice: ", static_cast<int>(options.size()));
+        const int pick = readMenuChoice("\nChoice: ", static_cast<int>(options.size()));
         if (pick == 0 || pick > static_cast<int>(POKEMON_TYPES.size()))
             return pick;
         if (toLowerStr(options[pick - 1]) != toLowerStr(firstType))

@@ -18,7 +18,7 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
     cout << "1. Save" << endl;
     cout << "2. Load" << endl;
     cout << "0. Back" << endl;
-    int choice = readMenuChoice("Choice: ", 2);
+    int choice = readMenuChoice("\nChoice: ", 2);
     if (choice == 0)
         return;
 
