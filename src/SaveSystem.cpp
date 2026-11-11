@@ -520,16 +520,5 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     registeredSpecies = std::move(loadedRegistrations);
     encounteredSpecies = std::move(loadedEncounters);
     getGameSettings() = loadedSettings;
-    if (loadedSettings.developerMode)
-    {
-        for (const SpeciesData *species : pokedex)
-        {
-            if (species != nullptr)
-            {
-                registeredSpecies.insert(species->internalID);
-                encounteredSpecies.insert(species->internalID);
-            }
-        }
-    }
     return true;
 }

@@ -341,7 +341,7 @@ void browsePokemonSummaries(const DoublyLinkedList &list, int position)
         while (true)
         {
             const int navigation = readSlotOrNav(
-                "N = next Pokémon | P = previous Pokémon | 0 = back: ",
+                "N = Next Pokémon | P = Previous Pokémon | 0 = Back: ",
                 0);
             if (navigation == NAV_INVALID)
             {

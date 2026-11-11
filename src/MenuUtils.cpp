@@ -50,7 +50,7 @@ void displayTypeSelection()
     }
     cout << right << endl;
     printMenuSeparator();
-    cout << " 0. Cancel" << endl;
+    cout << "0. Cancel" << endl;
 }
 
 string chooseType()
@@ -193,7 +193,7 @@ void displaySecondTypeSelection(const vector<string> &options)
     cout << right << endl;
     cout << "(Any = any second type, Mono = single-type Pokémon)" << endl;
     printMenuSeparator();
-    cout << " 0. Cancel" << endl;
+    cout << "0. Cancel" << endl;
 }
 
 int chooseSecondType(const string &firstType)

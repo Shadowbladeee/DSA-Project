@@ -421,7 +421,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         else if (action == 3)
         {
             int targetBox = readMenuChoice(
-                "\nEnter Target Box (1-30): ", MAX_BOXES, false,
+                "\nEnter Target Box (1-" + to_string(MAX_BOXES) + "): ",
+                MAX_BOXES, false,
                 [&pc, slot]() {
                     showBoxSlotActions(pc, slot);
                     cout << "Enter target box (1-" << MAX_BOXES << ")." << endl;
@@ -527,7 +528,7 @@ void printSearchResults(PCSystem &pc, const string &title,
         cout << results.size() << " found." << endl;
 
         const int selection = readSlotOrNav(
-            "Result # to view | N = next page | P = previous page | 0 = back: ",
+            "Result # to view | N = Next page | P = Previous page | 0 = Back: ",
             static_cast<int>(pageEnd - pageStart));
         if (selection == NAV_INVALID)
             continue;
@@ -601,27 +602,66 @@ NodeLess typeOrder(bool descending)
     };
 }
 
+void sortAllBoxesInGlobalOrder(PCSystem &pc, const NodeLess &less)
+{
+    vector<PokemonNode *> pokemon;
+    for (int boxNumber = 1; boxNumber <= MAX_BOXES; ++boxNumber)
+    {
+        DoublyLinkedList &box = pc.getList(boxNumber);
+        while (!box.isEmpty())
+            pokemon.push_back(box.removeByPosition(1));
+    }
+
+    stable_sort(pokemon.begin(), pokemon.end(),
+                [&less](const PokemonNode *left, const PokemonNode *right) {
+                    return less(*left, *right);
+                });
+
+    for (size_t i = 0; i < pokemon.size(); ++i)
+    {
+        const int boxNumber = static_cast<int>(i / BOX_CAPACITY) + 1;
+        pc.getList(boxNumber).insertNode(pokemon[i]);
+    }
+}
+
 void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
 {
     clearScreen();
     printMenuHeader("SORT POKÉMON");
     cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
     cout << "2. Party" << endl;
+    cout << "3. All PC Boxes (sort each box independently)" << endl;
+    cout << "4. All PC Boxes (global order; repack from Box 1)" << endl;
     printMenuSeparator();
     cout << "0. Back" << endl;
-    int target = readMenuChoice("\nChoice: ", 2, true, [&pc]() {
+    int target = readMenuChoice("\nChoice: ", 4, true, [&pc]() {
         clearScreen();
         printMenuHeader("SORT POKÉMON");
         cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
         cout << "2. Party" << endl;
+        cout << "3. All PC Boxes (sort each box independently)" << endl;
+        cout << "4. All PC Boxes (global order; repack from Box 1)" << endl;
         printMenuSeparator();
         cout << "0. Back" << endl;
     });
     if (target == 0)
         return;
 
-    DoublyLinkedList &list = (target == 1) ? pc.getCurrentList() : party;
-    if (list.getCount() < 2)
+    vector<DoublyLinkedList *> lists;
+    if (target == 1)
+        lists.push_back(&pc.getCurrentList());
+    else if (target == 2)
+        lists.push_back(&party);
+    else
+    {
+        for (int boxNumber = 1; boxNumber <= MAX_BOXES; ++boxNumber)
+            lists.push_back(&pc.getList(boxNumber));
+    }
+
+    const bool hasSortablePokemon = any_of(
+        lists.begin(), lists.end(),
+        [](const DoublyLinkedList *list) { return list->getCount() >= 2; });
+    if (!hasSortablePokemon)
     {
         reportError("Need at least 2 Pokémon to sort.");
         return;
@@ -646,6 +686,40 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     if (field == 0)
         return;
 
+    auto applySort = [&lists, &pc, target](const NodeLess &less) {
+        if (target == 4)
+        {
+            sortAllBoxesInGlobalOrder(pc, less);
+            return;
+        }
+        for (DoublyLinkedList *list : lists)
+            list->sort(less);
+    };
+    auto showSortResult = [target, &pc](const string &description,
+                                        const DoublyLinkedList *list) {
+        clearScreen();
+        if (target == 3)
+        {
+            cout << "[SUCCESS] Sorted Pokémon within each PC box "
+                 << description << ". Box assignments were unchanged." << endl;
+        }
+        else if (target == 4)
+        {
+            size_t total = 0;
+            for (int boxNumber = 1; boxNumber <= MAX_BOXES; ++boxNumber)
+                total += static_cast<size_t>(pc.getList(boxNumber).getCount());
+            cout << "[SUCCESS] Globally sorted " << total << " Pokémon across PC boxes "
+                 << description << ", then repacked from Box 1 ("
+                 << BOX_CAPACITY << " per box)." << endl;
+        }
+        else
+        {
+            cout << "[SUCCESS] Sorted " << description << "." << endl;
+            list->displayBox();
+        }
+        waitForContinue();
+    };
+
     if (field == 1)
     {
         clearScreen();
@@ -665,16 +739,14 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         if (dir == 0)
             return;
 
-        if (dir == 1)
-            list.sort(nameLess);
-        else
-            list.sort([](const PokemonNode &a, const PokemonNode &b)
-                      { return nameLess(b, a); });
-
-        clearScreen();
-        cout << "[SUCCESS] Sorted by name." << endl;
-        list.displayBox();
-        waitForContinue();
+        const NodeLess less = dir == 1
+                                  ? NodeLess(nameLess)
+                                  : NodeLess([](const PokemonNode &a,
+                                                const PokemonNode &b) {
+                                        return nameLess(b, a);
+                                    });
+        applySort(less);
+        showSortResult("by name", lists.front());
     }
     else if (field == 2)
     {
@@ -695,13 +767,10 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         if (dir == 0)
             return;
 
-        list.sort(typeOrder(dir == 2));
-
-        clearScreen();
-        cout << "[SUCCESS] Sorted by type ("
-             << (dir == 1 ? "ascending" : "descending") << ")." << endl;
-        list.displayBox();
-        waitForContinue();
+        applySort(typeOrder(dir == 2));
+        showSortResult("by type (" +
+                           string(dir == 1 ? "ascending" : "descending") + ")",
+                       lists.front());
     }
     else if (field == 3)
     {
@@ -722,17 +791,16 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         if (dir == 0)
             return;
 
-        if (dir == 1)
-            list.sort(dexLess);
-        else
-            list.sort([](const PokemonNode &a, const PokemonNode &b)
-                      { return dexLess(b, a); });
-
-        clearScreen();
-        cout << "[SUCCESS] Sorted by Dex number ("
-             << (dir == 1 ? "ascending" : "descending") << ")." << endl;
-        list.displayBox();
-        waitForContinue();
+        const NodeLess less = dir == 1
+                                  ? NodeLess(dexLess)
+                                  : NodeLess([](const PokemonNode &a,
+                                                const PokemonNode &b) {
+                                        return dexLess(b, a);
+                                    });
+        applySort(less);
+        showSortResult("by Dex number (" +
+                           string(dir == 1 ? "ascending" : "descending") + ")",
+                       lists.front());
     }
 }
 
@@ -873,7 +941,7 @@ void printBoxOverview(PCSystem &pc)
 
     for (int row = 0; row < 10; ++row)
     {
-        for (int col = 0; col < 3; ++col)
+        for (int col = 0; col < 4; ++col)
         {
             const int b = col * 10 + row + 1;
             string name = pc.getBoxName(b);
@@ -959,7 +1027,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 while (true)
                 {
                     showActiveBox(pc);
-                    int slot = readSlotOrNav("Slot # to manage | N = next | P = previous | G = grid/list | B = jump box | E = deposit to first empty slot | 0 = back: ",
+                    int slot = readSlotOrNav("Slot # to manage | N = Next | P = Previous | G = Grid/List | B = Jump box | E = Deposit to first empty slot | 0 = Back: ",
                                              pc.getCurrentList().getCount());
                     if (slot == NAV_INVALID)
                         continue;
@@ -984,7 +1052,9 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     else if (slot == NAV_BOX)
                     {
                         const int boxNumber = readMenuChoice(
-                            "Jump to box (1-30, 0 to cancel): ", MAX_BOXES, true,
+                            "Jump to box (1-" + to_string(MAX_BOXES) +
+                                ", 0 to cancel): ",
+                            MAX_BOXES, true,
                             [&pc]() { showActiveBox(pc); });
                         if (boxNumber != 0)
                             pc.setCurrentBox(boxNumber);
@@ -1010,7 +1080,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 if (sub == 1)
                 {
                     int boxNum = readMenuChoice(
-                        "\nEnter Box (1-30): ", MAX_BOXES, false,
+                        "\nEnter Box (1-" + to_string(MAX_BOXES) + "): ",
+                        MAX_BOXES, false,
                         displayBoxSettingsMenu);
                     if (pc.switchBox(boxNum))
                         waitForContinue();

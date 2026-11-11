@@ -1,6 +1,7 @@
 #include "include/CSVParser.h"
 #include "include/CatchMinigame.h"
 #include "include/ConsoleUtils.h"
+#include "include/DeveloperTools.h"
 #include "include/MenuUtils.h"
 #include "include/PCMenu.h"
 #include "include/PCSystem.h"
@@ -78,6 +79,8 @@ void displayMainMenu(const DoublyLinkedList &party, const PCSystem &pc,
     cout << "\n  SYSTEM" << endl;
     cout << "  5. Save / Load" << endl;
     cout << "  6. Settings" << endl;
+    if (getGameSettings().developerMode)
+        cout << "  7. Developer Tools" << endl;
     cout << "  0. Exit" << endl;
 }
 
@@ -88,7 +91,7 @@ void displaySettingsMenu(const GameSettings &settings)
     cout << "1. Sprites: " << (settings.spritesEnabled ? "On" : "Off") << endl;
     cout << "2. Sound effects: " << (settings.soundEnabled ? "On" : "Off") << endl;
     cout << "3. Colored type tags: " << (settings.typeTagsEnabled ? "On" : "Off") << endl;
-    cout << "4. Developer mode (unlock Pokédex): "
+    cout << "4. Developer mode (enable developer tools): "
          << (settings.developerMode ? "On" : "Off") << endl;
     cout << "5. Confirm before releasing Pokémon: "
          << (settings.confirmRelease ? "On" : "Off") << endl;
@@ -154,7 +157,8 @@ int main()
         while (choice != 0)
         {
             displayMainMenu(party, pc, currentSaveInfo, hasCurrentSaveInfo);
-            choice = readMenuChoice("\nSelect option: ", 6, true, [&]() {
+            const int maxMainOption = getGameSettings().developerMode ? 7 : 6;
+            choice = readMenuChoice("\nSelect option: ", maxMainOption, true, [&]() {
                 displayMainMenu(party, pc, currentSaveInfo, hasCurrentSaveInfo);
             });
 
@@ -211,17 +215,6 @@ int main()
                     else if (setting == 4)
                     {
                         mutableSettings.developerMode = !mutableSettings.developerMode;
-                        if (mutableSettings.developerMode)
-                        {
-                            for (const SpeciesData *species : pokedex)
-                            {
-                                if (species != nullptr)
-                                {
-                                    registeredSpecies.insert(species->internalID);
-                                    encounteredSpecies.insert(species->internalID);
-                                }
-                            }
-                        }
                     }
                     else if (setting == 5)
                     {
@@ -239,6 +232,11 @@ int main()
                     }
                 }
             }
+            else if (choice == 7 && getGameSettings().developerMode)
+            {
+                handleDeveloperTools(pokedex, pc, party,
+                                     registeredSpecies, encounteredSpecies);
+            }
         }
 
         if (askYesNo("Save before exiting?", [&]() {
@@ -252,5 +250,6 @@ int main()
 
     for (auto *species : pokedex)
         delete species;
+    clearScreen();
     return 0;
 }

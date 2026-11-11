@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-const int MAX_BOXES = 30;
+const int MAX_BOXES = 40;
 const int BOX_CAPACITY = 30;
 
 struct Box

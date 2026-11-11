@@ -273,10 +273,10 @@ void browsePokedexForms(const SpeciesData *selected,
 
         if (forms.size() > 1)
             cout << "\nForm " << (formIndex + 1) << "/" << forms.size()
-                 << " | N = next form | P = previous form" << endl;
+                 << " | N = Next form | P = Previous form" << endl;
         const int navigation = readSlotOrNav(
-            forms.size() > 1 ? "N = next form | P = previous form | 0 = back: "
-                             : "0 = back: ",
+            forms.size() > 1 ? "N = Next form | P = Previous form | 0 = Back: "
+                             : "0 = Back: ",
             0);
         if (navigation == NAV_INVALID)
             continue;
@@ -346,7 +346,7 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
             return;
         }
         cout << "Page " << (page + 1) << "/" << ((entries.size() + pageSize - 1) / pageSize)
-             << " | C = caught, S = seen, - = unseen" << endl;
+             << " | C = Caught, S = Seen, - = Unseen" << endl;
 
         for (size_t i = pageStart; i < pageEnd; ++i)
         {
@@ -376,7 +376,7 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
         }
 
         const int selection = readSlotOrNav(
-            "Entry # to view | N = next | P = previous | 0 = back: ",
+            "Entry # to view | N = Next | P = Previous | 0 = Back: ",
             static_cast<int>(pageEnd - pageStart));
         if (selection == NAV_INVALID)
             continue;
