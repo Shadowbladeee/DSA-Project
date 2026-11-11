@@ -7,6 +7,9 @@ struct GameSettings
     bool soundEnabled = true;
     bool typeTagsEnabled = true;
     bool developerMode = false;
+    bool confirmRelease = true;
+    bool confirmOverwrite = true;
+    int lastPokedexEntry = 1;
 };
 
 GameSettings &getGameSettings();

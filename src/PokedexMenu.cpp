@@ -1,5 +1,6 @@
 #include "../include/PokedexMenu.h"
 #include "../include/ConsoleUtils.h"
+#include "../include/GameSettings.h"
 #include "../include/MenuUtils.h"
 #include "../include/PokemonSummary.h"
 #include "../include/TypeTags.h"
@@ -16,11 +17,24 @@ namespace
 {
 constexpr int MAX_POKEDEX_NUMBER = 1025;
 
+int lastSelectedDexNumber()
+{
+    const int selected = getGameSettings().lastPokedexEntry;
+    return selected >= 1 && selected <= MAX_POKEDEX_NUMBER ? selected : 1;
+}
+
+void rememberPokedexEntry(int dexNumber)
+{
+    if (dexNumber >= 1 && dexNumber <= MAX_POKEDEX_NUMBER)
+        getGameSettings().lastPokedexEntry = dexNumber;
+}
+
 int promptPokedexNumber()
 {
     return readMenuChoice("\nEnter Dex number (1-1025, 0 to cancel): ",
                           MAX_POKEDEX_NUMBER);
 }
+
 } // namespace
 
 vector<const SpeciesData *> getSortedPokedexEntries(
@@ -216,6 +230,7 @@ void browsePokedexForms(const SpeciesData *selected,
                         const set<int> &registeredSpecies,
                         const set<int> &encounteredSpecies)
 {
+    rememberPokedexEntry(selected->pokedexID);
     vector<const SpeciesData *> forms;
     for (const SpeciesData *species : pokedex)
     {
@@ -274,6 +289,7 @@ void showPokedexEntryByNumber(int dexNumber,
 
     if (selected != nullptr)
     {
+        rememberPokedexEntry(selected->pokedexID);
         browsePokedexForms(selected, pokedex, registeredSpecies, encounteredSpecies);
         return;
     }
@@ -293,6 +309,15 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
     entries = getCanonicalEntriesForMatches(entries, pokedex);
     const size_t pageSize = 20;
     size_t page = 0;
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        if (entries[i]->pokedexID == lastSelectedDexNumber())
+        {
+            page = i / pageSize;
+            break;
+        }
+    }
+
     while (true)
     {
         clearScreen();
@@ -319,7 +344,8 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
                 entry->pokedexID, pokedex, registeredSpecies);
             const bool isEncountered = hasEncounteredForm(
                 entry->pokedexID, pokedex, encounteredSpecies);
-            cout << setw(2) << slot << ". #"
+            cout << (entry->pokedexID == lastSelectedDexNumber() ? "> " : "  ")
+                 << setw(2) << slot << ". #"
                  << right << setfill('0') << setw(3) << entry->pokedexID << setfill(' ')
                  << " " << (isEncountered ? species->name : "???");
             if (isRegistered)
@@ -366,8 +392,44 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
         }
 
         const SpeciesData *selected = entries[pageStart + static_cast<size_t>(selection - 1)];
+        rememberPokedexEntry(selected->pokedexID);
         browsePokedexForms(selected, pokedex, registeredSpecies, encounteredSpecies);
     }
+}
+
+void filterPokedexByStatus(const vector<SpeciesData *> &pokedex,
+                           const set<int> &registeredSpecies,
+                           const set<int> &encounteredSpecies)
+{
+    clearScreen();
+    printMenuHeader("FILTER POKÉDEX BY STATUS");
+    cout << "1. Caught" << endl;
+    cout << "2. Seen (not caught)" << endl;
+    cout << "3. Unseen" << endl;
+    printMenuSeparator();
+    cout << "0. Back" << endl;
+    const int choice = readMenuChoice("\nChoice: ", 3);
+    if (choice == 0)
+        return;
+
+    vector<const SpeciesData *> matches;
+    for (const SpeciesData *species : getSortedPokedexEntries(pokedex))
+    {
+        const bool caught = hasRegisteredForm(
+            species->pokedexID, pokedex, registeredSpecies);
+        const bool seen = hasEncounteredForm(
+            species->pokedexID, pokedex, encounteredSpecies);
+        if ((choice == 1 && caught) ||
+            (choice == 2 && seen && !caught) ||
+            (choice == 3 && !seen))
+            matches.push_back(species);
+    }
+
+    const string title = choice == 1 ? "POKÉDEX: CAUGHT"
+                         : choice == 2 ? "POKÉDEX: SEEN"
+                                       : "POKÉDEX: UNSEEN";
+    browsePokedexEntries(std::move(matches), pokedex, registeredSpecies,
+                         encounteredSpecies, title);
 }
 
 void searchPokedex(const vector<SpeciesData *> &pokedex,
@@ -488,9 +550,10 @@ void handlePokedexMenu(const vector<SpeciesData *> &pokedex,
         cout << "2. Browse entries" << endl;
         cout << "3. Search entries" << endl;
         cout << "4. Go to Dex number" << endl;
+        cout << "5. Filter by Caught / Seen / Unseen" << endl;
         printMenuSeparator();
         cout << "0. Back" << endl;
-        const int choice = readMenuChoice("\nChoice: ", 4);
+        const int choice = readMenuChoice("\nChoice: ", 5);
         if (choice == 0)
             return;
         if (choice == 1)
@@ -499,12 +562,14 @@ void handlePokedexMenu(const vector<SpeciesData *> &pokedex,
             browsePokedex(pokedex, registeredSpecies, encounteredSpecies);
         else if (choice == 3)
             searchPokedex(pokedex, registeredSpecies, encounteredSpecies);
-        else
+        else if (choice == 4)
         {
             const int dexNumber = promptPokedexNumber();
             if (dexNumber != 0)
                 showPokedexEntryByNumber(dexNumber, pokedex, registeredSpecies,
                                          encounteredSpecies);
         }
+        else
+            filterPokedexByStatus(pokedex, registeredSpecies, encounteredSpecies);
     }
 }

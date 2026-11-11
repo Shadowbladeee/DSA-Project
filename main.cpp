@@ -165,12 +165,17 @@ int main()
                     cout << "\n--- SETTINGS ---" << endl;
                     cout << "1. Sprites: " << (settings.spritesEnabled ? "On" : "Off") << endl;
                     cout << "2. Sound effects: " << (settings.soundEnabled ? "On" : "Off") << endl;
-                    cout << "3. Type tags: " << (settings.typeTagsEnabled ? "On" : "Off") << endl;
+                    cout << "3. Colored type tags: " << (settings.typeTagsEnabled ? "On" : "Off") << endl;
                     cout << "4. Developer mode (unlock Pokédex): "
                          << (settings.developerMode ? "On" : "Off") << endl;
+                    cout << "5. Confirm before releasing Pokémon: "
+                         << (settings.confirmRelease ? "On" : "Off") << endl;
+                    cout << "6. Confirm before overwriting save/session: "
+                         << (settings.confirmOverwrite ? "On" : "Off") << endl;
+                    cout << "7. Reset settings to defaults" << endl;
                     cout << "Settings are stored in the save file when you save the game." << endl;
                     cout << "0. Back" << endl;
-                    const int setting = readMenuChoice("\nSelect setting: ", 4);
+                    const int setting = readMenuChoice("\nSelect setting: ", 7);
                     GameSettings &mutableSettings = getGameSettings();
                     if (setting == 0)
                     {
@@ -201,6 +206,18 @@ int main()
                                     encounteredSpecies.insert(species->internalID);
                                 }
                             }
+                        }
+                        else if (setting == 5)
+                        {
+                            mutableSettings.confirmRelease = !mutableSettings.confirmRelease;
+                        }
+                        else if (setting == 6)
+                        {
+                            mutableSettings.confirmOverwrite = !mutableSettings.confirmOverwrite;
+                        }
+                        else if (setting == 7 && askYesNo("Reset all settings to defaults?"))
+                        {
+                            mutableSettings = GameSettings{};
                         }
                     }
                 }

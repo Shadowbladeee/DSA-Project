@@ -219,6 +219,10 @@ int readSlotOrNav(const string &prompt, int maxSlot)
             return NAV_PREV;
         if (t == "g")
             return NAV_GRID;
+        if (t == "e")
+            return NAV_EMPTY;
+        if (t == "b")
+            return NAV_BOX;
 
         istringstream in(t);
         int v = 0;

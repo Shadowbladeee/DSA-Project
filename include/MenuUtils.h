@@ -10,6 +10,8 @@ extern const std::vector<std::string> GENERATION_LABELS;
 const int NAV_NEXT = -2;
 const int NAV_PREV = -3;
 const int NAV_GRID = -4;
+const int NAV_EMPTY = -5;
+const int NAV_BOX = -6;
 
 std::string toLowerStr(std::string text);
 int readChoice();

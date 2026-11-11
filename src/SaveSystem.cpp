@@ -1,6 +1,7 @@
 #include "../include/SaveSystem.h"
 #include "../include/GameSettings.h"
 #include "../include/ConsoleUtils.h"
+#include "../include/MenuUtils.h"
 #include <ctime>
 #include <cstdio>
 #include <fstream>
@@ -15,7 +16,7 @@ using namespace std;
 
 namespace
 {
-const int SAVE_VERSION = 6;
+const int SAVE_VERSION = 8;
 
 struct SavedPokemon
 {
@@ -242,6 +243,13 @@ bool readSaveFileInfo(const string &filename,
 bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
               const set<int> &registeredSpecies, const set<int> &encounteredSpecies)
 {
+    if (getGameSettings().confirmOverwrite && fileExists(filename) &&
+        !askYesNo("Overwrite the existing save file? A backup will be kept."))
+    {
+        cout << "Save cancelled." << endl;
+        return false;
+    }
+
     const string tmpName = filename + ".tmp";
     const string savedAt = currentTimestamp();
     if (savedAt.empty())
@@ -266,7 +274,9 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         const GameSettings &settings = getGameSettings();
         out << "SETTINGS," << settings.spritesEnabled << ","
             << settings.soundEnabled << "," << settings.typeTagsEnabled << ","
-            << settings.developerMode << "\n";
+            << settings.developerMode << "," << settings.confirmRelease << ","
+            << settings.confirmOverwrite << "\n";
+        out << "POKEDEX_CURSOR," << settings.lastPokedexEntry << "\n";
         out << "SAVED_AT," << quote(savedAt) << "\n";
 
         for (int id : registeredSpecies)
@@ -342,6 +352,7 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     bool sawVersion = false;
     bool sawSettings = false;
     bool sawTimestamp = false;
+    bool sawPokedexCursor = false;
     int version = 0;
     GameSettings loadedSettings;
     vector<string> boxNames(MAX_BOXES + 1);
@@ -396,18 +407,27 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         else if (tag == "SETTINGS")
         {
             int sprites = 0, sound = 0, typeTags = 0, developer = 0;
-            if (version < 5 || sawSettings || t.size() != 5 ||
+            int confirmRelease = 1, confirmOverwrite = 1;
+            const size_t expectedFields = version >= 8 ? 7 : 5;
+            if (version < 5 || sawSettings || t.size() != expectedFields ||
                 !toInt(t[1], sprites) || !toInt(t[2], sound) ||
                 !toInt(t[3], typeTags) || !toInt(t[4], developer) ||
                 (sprites != 0 && sprites != 1) ||
                 (sound != 0 && sound != 1) ||
                 (typeTags != 0 && typeTags != 1) ||
-                (developer != 0 && developer != 1))
+                (developer != 0 && developer != 1) ||
+                (version >= 8 &&
+                 (!toInt(t[5], confirmRelease) ||
+                  !toInt(t[6], confirmOverwrite) ||
+                  (confirmRelease != 0 && confirmRelease != 1) ||
+                  (confirmOverwrite != 0 && confirmOverwrite != 1))))
                 return fail("bad SETTINGS record");
             loadedSettings.spritesEnabled = sprites != 0;
             loadedSettings.soundEnabled = sound != 0;
             loadedSettings.typeTagsEnabled = typeTags != 0;
             loadedSettings.developerMode = developer != 0;
+            loadedSettings.confirmRelease = confirmRelease != 0;
+            loadedSettings.confirmOverwrite = confirmOverwrite != 0;
             sawSettings = true;
         }
         else if (tag == "SAVED_AT")
@@ -415,6 +435,15 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
             if (version < 6 || sawTimestamp || t.size() != 2 || t[1].empty())
                 return fail("bad SAVED_AT record");
             sawTimestamp = true;
+        }
+        else if (tag == "POKEDEX_CURSOR")
+        {
+            int dexNumber = 0;
+            if (version < 7 || sawPokedexCursor || t.size() != 2 ||
+                !toInt(t[1], dexNumber) || dexNumber < 1 || dexNumber > 1025)
+                return fail("bad POKEDEX_CURSOR record");
+            loadedSettings.lastPokedexEntry = dexNumber;
+            sawPokedexCursor = true;
         }
         else if (tag == "POKEDEX")
         {
@@ -466,6 +495,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         return fail("empty file");
     if (version >= 6 && !sawTimestamp)
         return fail("missing SAVED_AT record");
+    if (version >= 7 && !sawPokedexCursor)
+        return fail("missing POKEDEX_CURSOR record");
 
     clearList(party);
     for (int b = 1; b <= MAX_BOXES; ++b)

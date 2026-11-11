@@ -1,6 +1,7 @@
 #include "../include/SaveMenu.h"
 #include "../include/CatchMinigame.h"
 #include "../include/ConsoleUtils.h"
+#include "../include/GameSettings.h"
 #include "../include/MenuUtils.h"
 #include "../include/SaveSystem.h"
 #include <iostream>
@@ -65,7 +66,8 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
         cout << "Backup available: "
              << (saveFileExists(SAVE_FILE + ".bak") ? "Yes" : "No") << endl;
         waitForContinue();
-        if (!askYesNo("Loading replaces your current party and boxes. Continue?"))
+        if (getGameSettings().confirmOverwrite &&
+            !askYesNo("Loading replaces your current party and boxes. Continue?"))
         {
             cout << "Load cancelled." << endl;
             waitForContinue();

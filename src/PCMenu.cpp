@@ -1,6 +1,7 @@
 #include "../include/PCMenu.h"
 #include "../include/CatchMinigame.h"
 #include "../include/ConsoleUtils.h"
+#include "../include/GameSettings.h"
 #include "../include/MenuUtils.h"
 #include "../include/PokemonSummary.h"
 #include "../include/TypeTags.h"
@@ -33,6 +34,40 @@ PokemonNode *getPokemonAtPosition(const DoublyLinkedList &list, int position)
         pokemon = pokemon->next;
 
     return pokemon;
+}
+
+void depositPartyPokemonIntoFirstEmptySlot(DoublyLinkedList &party, PCSystem &pc)
+{
+    const int firstEmptySlot = pc.getCurrentBoxCount() + 1;
+    if (firstEmptySlot > BOX_CAPACITY)
+    {
+        reportError("The active box is full.");
+        return;
+    }
+    if (party.getCount() <= 1)
+    {
+        reportError("At least one Pokémon must remain in the party.");
+        return;
+    }
+
+    displayParty(party);
+    cout << "First empty slot in [" << pc.getCurrentBoxName() << "]: "
+         << firstEmptySlot << "/" << BOX_CAPACITY << endl;
+    const int partySlot = readMenuChoice(
+        "Choose a party Pokémon to deposit (0 to cancel): ", party.getCount());
+    if (partySlot == 0)
+        return;
+
+    PokemonNode *moved = party.removeByPosition(partySlot);
+    if (moved == nullptr)
+    {
+        reportError("Could not remove the selected Pokémon from the party.");
+        return;
+    }
+    pc.getCurrentList().insertNode(moved);
+    cout << "[SUCCESS] Deposited " << moved->nickname << " into slot "
+         << firstEmptySlot << " of [" << pc.getCurrentBoxName() << "]." << endl;
+    waitForContinue();
 }
 
 void printPokemonSlotContext(const PokemonNode *pokemon, const string &location,
@@ -168,7 +203,8 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             }
 
             const PokemonNode *p = nodeAt(party, slot);
-            if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
+            if (getGameSettings().confirmRelease &&
+                !askYesNo("Release " + p->nickname + "? This can't be undone."))
             {
                 cout << "Release cancelled." << endl;
                 waitForContinue();
@@ -380,7 +416,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         else if (action == 6)
         {
             const PokemonNode *p = nodeAt(boxList, slot);
-            if (!askYesNo("Release " + p->nickname + "? This can't be undone."))
+            if (getGameSettings().confirmRelease &&
+                !askYesNo("Release " + p->nickname + "? This can't be undone."))
             {
                 cout << "Release cancelled." << endl;
                 waitForContinue();
@@ -409,27 +446,72 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     }
 }
 
-void printSearchResults(const string &title, const vector<SearchResult> &results)
+void printSearchResults(PCSystem &pc, const string &title,
+                        const vector<SearchResult> &results)
 {
-    clearScreen();
-    printMenuHeader(title);
     if (results.empty())
     {
+        clearScreen();
+        printMenuHeader(title);
         cout << "(No matches)" << endl;
         waitForContinue();
         return;
     }
-    for (const auto &r : results)
+
+    constexpr size_t PAGE_SIZE = 15;
+    size_t page = 0;
+    while (true)
     {
-        cout << "Box " << r.boxNumber << " (" << r.boxName << ") Slot " << r.slot
-             << ": " << r.nickname << " (#" << right << setfill('0') << setw(3) << r.dexNumber
-             << setfill(' ') << " " << r.speciesName << ") "
-             << colorTypeTag(r.type1)
-             << (r.type2.empty() ? "" : " " + colorTypeTag(r.type2)) << " Gen "
-             << r.generation << endl;
+        const size_t pageStart = page * PAGE_SIZE;
+        const size_t pageEnd = min(results.size(), pageStart + PAGE_SIZE);
+        clearScreen();
+        printMenuHeader(title);
+        cout << "Page " << (page + 1) << "/"
+             << ((results.size() + PAGE_SIZE - 1) / PAGE_SIZE)
+             << " | Select a result to view its summary." << endl;
+        for (size_t i = pageStart; i < pageEnd; ++i)
+        {
+            const auto &r = results[i];
+            cout << setw(2) << (i - pageStart + 1) << ". Box " << r.boxNumber
+                 << " (" << r.boxName << ") Slot " << r.slot
+                 << ": " << r.nickname << " (#" << right << setfill('0')
+                 << setw(3) << r.dexNumber << setfill(' ') << " "
+                 << r.speciesName << ") " << colorTypeTag(r.type1)
+                 << (r.type2.empty() ? "" : " " + colorTypeTag(r.type2))
+                 << " Gen " << r.generation << endl;
+        }
+        cout << results.size() << " found." << endl;
+
+        const int selection = readSlotOrNav(
+            "Result # to view | N = next page | P = previous page | 0 = back: ",
+            static_cast<int>(pageEnd - pageStart));
+        if (selection == 0)
+            return;
+        if (selection == NAV_NEXT)
+        {
+            if (pageEnd < results.size())
+                ++page;
+            else
+                reportError("Already on the last page.");
+            continue;
+        }
+        if (selection == NAV_PREV)
+        {
+            if (page > 0)
+                --page;
+            else
+                reportError("Already on the first page.");
+            continue;
+        }
+        if (selection < 1 || selection > static_cast<int>(pageEnd - pageStart))
+        {
+            reportError("Invalid search result selection.");
+            continue;
+        }
+
+        const SearchResult &result = results[pageStart + selection - 1];
+        browsePokemonSummaries(pc.getList(result.boxNumber), result.slot);
     }
-    cout << results.size() << " found." << endl;
-    waitForContinue();
 }
 
 bool nameLess(const PokemonNode &a, const PokemonNode &b)
@@ -770,7 +852,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 while (true)
                 {
                     showActiveBox(pc);
-                    int slot = readSlotOrNav("Slot # to manage | N = next | P = previous | G = grid/list | 0 = back: ",
+                    int slot = readSlotOrNav("Slot # to manage | N = next | P = previous | G = grid/list | B = jump box | E = deposit to first empty slot | 0 = back: ",
                                              pc.getCurrentList().getCount());
                     if (slot == 0)
                         break;
@@ -789,6 +871,17 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     else if (slot == NAV_GRID)
                     {
                         boxGridView = !boxGridView;
+                    }
+                    else if (slot == NAV_BOX)
+                    {
+                        const int boxNumber = readMenuChoice(
+                            "Jump to box (1-30, 0 to cancel): ", MAX_BOXES);
+                        if (boxNumber != 0)
+                            pc.setCurrentBox(boxNumber);
+                    }
+                    else if (slot == NAV_EMPTY)
+                    {
+                        depositPartyPokemonIntoFirstEmptySlot(party, pc);
                     }
                     else
                     {
@@ -853,7 +946,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 {
                     cout << "Enter nickname or species: ";
                     getline(cin, query);
-                    printSearchResults("SEARCH: \"" + query + "\"", pc.search(query));
+                    printSearchResults(pc, "SEARCH: \"" + query + "\"", pc.search(query));
                 }
                 else if (sub == 2)
                 {
@@ -864,18 +957,18 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                         if (second >= 1 && second <= 18)
                         {
                             string type2 = POKEMON_TYPES[second - 1];
-                            printSearchResults("TYPE: " + colorTypeTag(type1) + " / " +
+                            printSearchResults(pc, "TYPE: " + colorTypeTag(type1) + " / " +
                                                    colorTypeTag(type2) + " (either order)",
                                                pc.searchByTypePair(type1, type2));
                         }
                         else if (second == 19)
                         {
-                            printSearchResults("TYPE: " + colorTypeTag(type1) + " (any second type)",
+                            printSearchResults(pc, "TYPE: " + colorTypeTag(type1) + " (any second type)",
                                                pc.searchByType(type1));
                         }
                         else if (second == 20)
                         {
-                            printSearchResults("TYPE: " + colorTypeTag(type1) + " (single-type only)",
+                            printSearchResults(pc, "TYPE: " + colorTypeTag(type1) + " (single-type only)",
                                                pc.searchByMonoType(type1));
                         }
                     }
@@ -885,7 +978,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     int gen = chooseGeneration();
                     if (gen != 0)
                     {
-                        printSearchResults("GENERATION: " + GENERATION_LABELS[gen - 1],
+                        printSearchResults(pc, "GENERATION: " + GENERATION_LABELS[gen - 1],
                                            pc.searchByGeneration(gen));
                     }
                 }
@@ -894,7 +987,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     int dex = promptDexNumber();
                     if (dex != 0)
                     {
-                        printSearchResults("DEX #" + to_string(dex), pc.searchByDexNumber(dex));
+                        printSearchResults(pc, "DEX #" + to_string(dex), pc.searchByDexNumber(dex));
                     }
                 }
             }

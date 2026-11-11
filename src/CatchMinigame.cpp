@@ -491,11 +491,6 @@ namespace
                          bool isShiny, bool playCry)
     {
         clearScreen();
-        if (playCry)
-        {
-            playPokemonCry(pokemon->pokedexID);
-            timeDelay(1000);
-        }
 
         const string formID = to_string(pokemon->internalID);
         const string pokedexID = to_string(pokemon->pokedexID);
@@ -520,6 +515,9 @@ namespace
         cout << "  Level: " << modifiers.level << " | Nature: " << modifiers.nature
              << " | Ability: " << (modifiers.ability.empty() ? "None" : formatAbilities(modifiers.ability)) << "\n";
         cout << "------------------------------------\n";
+        cout.flush();
+        if (playCry)
+            playPokemonCry(pokemon->pokedexID);
     }
 
     void handleEncounter(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
