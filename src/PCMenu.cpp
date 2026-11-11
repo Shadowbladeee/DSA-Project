@@ -452,7 +452,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         }
         else if (action == 5)
         {
-            browsePokemonSummaries(boxList, slot);
+            slot = browsePokemonSummaries(boxList, slot);
             continue;
         }
         else if (action == 6)
