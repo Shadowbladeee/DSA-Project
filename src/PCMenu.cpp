@@ -180,7 +180,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
     }
 }
 
-void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &pc)
+void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
 {
     while (true)
     {
@@ -408,7 +408,6 @@ void printSearchResults(const string &title, const vector<SearchResult> &results
     waitForContinue();
 }
 
-
 bool nameLess(const PokemonNode &a, const PokemonNode &b)
 {
     string na = toLowerStr(a.species ? a.species->name : "");
@@ -440,7 +439,8 @@ int typeRank(const string &type)
 
 NodeLess typeOrder(bool descending)
 {
-    return [descending](const PokemonNode &a, const PokemonNode &b) {
+    return [descending](const PokemonNode &a, const PokemonNode &b)
+    {
         int ra = typeRank(a.species ? a.species->type1 : "");
         int rb = typeRank(b.species ? b.species->type1 : "");
         if (ra != rb)
@@ -491,7 +491,8 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         if (dir == 1)
             list.sort(nameLess);
         else
-            list.sort([](const PokemonNode &a, const PokemonNode &b) { return nameLess(b, a); });
+            list.sort([](const PokemonNode &a, const PokemonNode &b)
+                      { return nameLess(b, a); });
 
         clearScreen();
         cout << "[SUCCESS] Sorted by name." << endl;
@@ -529,7 +530,8 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         if (dir == 1)
             list.sort(dexLess);
         else
-            list.sort([](const PokemonNode &a, const PokemonNode &b) { return dexLess(b, a); });
+            list.sort([](const PokemonNode &a, const PokemonNode &b)
+                      { return dexLess(b, a); });
 
         clearScreen();
         cout << "[SUCCESS] Sorted by Dex number ("
@@ -538,7 +540,6 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         waitForContinue();
     }
 }
-
 
 bool boxGridView = true;
 
@@ -582,7 +583,9 @@ string fitText(const string &s, int width)
     while (i < s.size() && n < width - 1)
     {
         unsigned char c = static_cast<unsigned char>(s[i]);
-        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
+        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3
+                                   : (c >= 0xC0)   ? 2
+                                                   : 1;
         out += s.substr(i, len);
         i += len;
         ++n;
@@ -632,7 +635,9 @@ void printPokemonGrid(const DoublyLinkedList &list, int capacity, int cols)
             line2 += padTo(middle, CELL_W);
             line3 += padTo(bottom, CELL_W);
         }
-        cout << line1 << "\n" << line2 << "\n" << line3 << "\n\n";
+        cout << line1 << "\n"
+             << line2 << "\n"
+             << line3 << "\n\n";
     }
 }
 
@@ -690,7 +695,6 @@ void printBoxOverview(PCSystem &pc)
     }
     waitForContinue();
 }
-
 
 void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
 {
@@ -847,7 +851,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     if (gen != 0)
                     {
                         printSearchResults("GENERATION: " + GENERATION_LABELS[gen - 1],
-                                        pc.searchByGeneration(gen));
+                                           pc.searchByGeneration(gen));
                     }
                 }
                 else if (sub == 4)

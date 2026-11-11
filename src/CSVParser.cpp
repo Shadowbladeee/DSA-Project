@@ -1,4 +1,5 @@
 #include "../include/CSVParser.h"
+#include "../include/NameNormalizer.h"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -228,6 +229,12 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
     }
 
     file.close();
+
+    for (SpeciesData *species : database)
+    {
+        species->name = normalizePokemonName(species->name);
+    }
+
     return database;
 }
 
