@@ -210,7 +210,7 @@ void printSummary(const PokemonNode *pokemon, const SpeciesData *species,
         return;
     }
 
-    if (playCry || showSprite)
+    if (playCry)
     {
         playPokemonCry(species->pokedexID);
     }
@@ -343,6 +343,11 @@ void browsePokemonSummaries(const DoublyLinkedList &list, int position)
             const int navigation = readSlotOrNav(
                 "N = next Pokémon | P = previous Pokémon | 0 = back: ",
                 0);
+            if (navigation == NAV_INVALID)
+            {
+                printSummary(pokemon, pokemon->species, false, true, false);
+                continue;
+            }
             if (navigation == 0)
                 return;
             if (navigation == NAV_NEXT && position < list.getCount())
@@ -356,7 +361,8 @@ void browsePokemonSummaries(const DoublyLinkedList &list, int position)
                 break;
             }
 
-            reportError("No Pokémon in that direction.");
+            reportInvalidInput("No Pokémon in that direction.");
+            printSummary(pokemon, pokemon->species, false, true, false);
         }
     }
 }

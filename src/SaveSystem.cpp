@@ -244,7 +244,11 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
               const set<int> &registeredSpecies, const set<int> &encounteredSpecies)
 {
     if (getGameSettings().confirmOverwrite && fileExists(filename) &&
-        !askYesNo("Overwrite the existing save file? A backup will be kept."))
+        !askYesNo("Overwrite the existing save file? A backup will be kept.", []() {
+            clearScreen();
+            printMenuHeader("OVERWRITE SAVE");
+            cout << "The existing save will be backed up before replacement." << endl;
+        }))
     {
         cout << "Save cancelled." << endl;
         return false;

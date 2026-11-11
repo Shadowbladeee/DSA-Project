@@ -285,7 +285,7 @@ namespace
             choice >= minChoice && choice <= maxChoice)
             return ChoiceReadResult::Valid;
 
-        reportError("Invalid Choice.");
+        reportInvalidInput("Invalid choice.");
         return ChoiceReadResult::Invalid;
     }
 
@@ -311,16 +311,6 @@ namespace
     }
 
     // --- Systems Implementation ---
-
-    void showInventory()
-    {
-        clearScreen();
-        printMenuHeader("CURRENT INVENTORY");
-        cout << "  Safari Balls : " << playerInv.balls << " / " << playerInv.maxBalls << "\n";
-        cout << "  Rocks        : " << playerInv.rocks << " / " << playerInv.maxRocks << "\n";
-        cout << "  Bait         : " << playerInv.bait << " / " << playerInv.maxBait << "\n";
-        waitForContinue();
-    }
 
     enum class ItemDiscovery
     {
@@ -830,12 +820,11 @@ namespace
         {
             showExpeditionStatus();
             cout << "1. Explore\n";
-            cout << "2. View Inventory\n";
-            cout << "3. End Expedition\n";
+            cout << "2. End Expedition\n";
             printMenuSeparator();
 
             int choice;
-            const ChoiceReadResult result = readMenuChoice("Choice: ", 1, 3, choice);
+            const ChoiceReadResult result = readMenuChoice("Choice: ", 1, 2, choice);
             if (result == ChoiceReadResult::InputClosed)
             {
                 cout << "\n[INPUT] Input closed. Ending the expedition.\n";
@@ -851,10 +840,6 @@ namespace
                 waitForContinue();
             }
             else if (choice == 2)
-            {
-                showInventory();
-            }
-            else if (choice == 3)
             {
                 if (lastChanceUsed)
                     endingBonus = 50;

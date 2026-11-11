@@ -1,6 +1,7 @@
 #ifndef MENU_UTILS_H
 #define MENU_UTILS_H
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -12,16 +13,20 @@ const int NAV_PREV = -3;
 const int NAV_GRID = -4;
 const int NAV_EMPTY = -5;
 const int NAV_BOX = -6;
+const int NAV_INVALID = -7;
 
 std::string toLowerStr(std::string text);
 int readChoice();
-int readMenuChoice(const std::string &prompt, int maxOption, bool allowZero = true);
-int readNonNegativeNumber(const std::string &prompt);
-bool askYesNo(const std::string &prompt);
+int readMenuChoice(const std::string &prompt, int maxOption, bool allowZero,
+                   const std::function<void()> &redrawOnInvalid);
+int readNonNegativeNumber(const std::string &prompt,
+                          const std::function<void()> &redrawOnInvalid);
+bool askYesNo(const std::string &prompt,
+              const std::function<void()> &redrawOnInvalid);
 int chooseSecondType(const std::string &firstType);
 std::string chooseType();
 int chooseGeneration();
-int promptDexNumber();
+int promptDexNumber(const std::function<void()> &redrawOnInvalid);
 int readSlotOrNav(const std::string &prompt, int maxSlot);
 std::string fillBar(int count, int capacity, int width);
 

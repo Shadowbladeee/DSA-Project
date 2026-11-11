@@ -29,10 +29,23 @@ void rememberPokedexEntry(int dexNumber)
         getGameSettings().lastPokedexEntry = dexNumber;
 }
 
+void displayPokedexMenu()
+{
+    clearScreen();
+    printMenuHeader("POKÉDEX");
+    cout << "1. Completion" << endl;
+    cout << "2. Browse entries" << endl;
+    cout << "3. Search entries" << endl;
+    cout << "4. Go to Dex number" << endl;
+    cout << "5. Filter by Caught / Seen / Unseen" << endl;
+    printMenuSeparator();
+    cout << "0. Back" << endl;
+}
+
 int promptPokedexNumber()
 {
     return readMenuChoice("\nEnter Dex number (1-1025, 0 to cancel): ",
-                          MAX_POKEDEX_NUMBER);
+                          MAX_POKEDEX_NUMBER, true, displayPokedexMenu);
 }
 
 } // namespace
@@ -265,6 +278,8 @@ void browsePokedexForms(const SpeciesData *selected,
             forms.size() > 1 ? "N = next form | P = previous form | 0 = back: "
                              : "0 = back: ",
             0);
+        if (navigation == NAV_INVALID)
+            continue;
         if (navigation == 0)
             return;
         if (navigation == NAV_NEXT)
@@ -273,7 +288,7 @@ void browsePokedexForms(const SpeciesData *selected,
             formIndex = (formIndex + forms.size() - 1) % forms.size();
         else
         {
-            reportError("Invalid Choice.");
+            reportInvalidInput("Invalid choice.");
         }
     }
 }
@@ -363,6 +378,8 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
         const int selection = readSlotOrNav(
             "Entry # to view | N = next | P = previous | 0 = back: ",
             static_cast<int>(pageEnd - pageStart));
+        if (selection == NAV_INVALID)
+            continue;
         if (selection == 0)
             return;
         if (selection == NAV_NEXT)
@@ -385,9 +402,10 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
             }
             continue;
         }
-        if (selection == NAV_GRID)
+        if (selection < 1 ||
+            selection > static_cast<int>(pageEnd - pageStart))
         {
-            reportError("Invalid Choice.");
+            reportInvalidInput("Invalid choice.");
             continue;
         }
 
@@ -408,7 +426,15 @@ void filterPokedexByStatus(const vector<SpeciesData *> &pokedex,
     cout << "3. Unseen" << endl;
     printMenuSeparator();
     cout << "0. Back" << endl;
-    const int choice = readMenuChoice("\nChoice: ", 3);
+    const int choice = readMenuChoice("\nChoice: ", 3, true, []() {
+        clearScreen();
+        printMenuHeader("FILTER POKÉDEX BY STATUS");
+        cout << "1. Caught" << endl;
+        cout << "2. Seen (not caught)" << endl;
+        cout << "3. Unseen" << endl;
+        printMenuSeparator();
+        cout << "0. Back" << endl;
+    });
     if (choice == 0)
         return;
 
@@ -443,7 +469,15 @@ void searchPokedex(const vector<SpeciesData *> &pokedex,
     cout << "3. By generation" << endl;
     printMenuSeparator();
     cout << "0. Back" << endl;
-    const int choice = readMenuChoice("\nChoice: ", 3);
+    const int choice = readMenuChoice("\nChoice: ", 3, true, []() {
+        clearScreen();
+        printMenuHeader("SEARCH POKÉDEX");
+        cout << "1. By nickname / species" << endl;
+        cout << "2. By type" << endl;
+        cout << "3. By generation" << endl;
+        printMenuSeparator();
+        cout << "0. Back" << endl;
+    });
     if (choice == 0)
         return;
 
@@ -544,16 +578,9 @@ void handlePokedexMenu(const vector<SpeciesData *> &pokedex,
 {
     while (true)
     {
-        clearScreen();
-        printMenuHeader("POKÉDEX");
-        cout << "1. Completion" << endl;
-        cout << "2. Browse entries" << endl;
-        cout << "3. Search entries" << endl;
-        cout << "4. Go to Dex number" << endl;
-        cout << "5. Filter by Caught / Seen / Unseen" << endl;
-        printMenuSeparator();
-        cout << "0. Back" << endl;
-        const int choice = readMenuChoice("\nChoice: ", 5);
+        displayPokedexMenu();
+        const int choice = readMenuChoice("\nChoice: ", 5, true,
+                                          displayPokedexMenu);
         if (choice == 0)
             return;
         if (choice == 1)

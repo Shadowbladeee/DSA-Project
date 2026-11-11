@@ -52,6 +52,53 @@ void registerListSpecies(set<int> &registeredSpecies, set<int> &encounteredSpeci
     }
 }
 
+void displayMainMenu(const DoublyLinkedList &party, const PCSystem &pc,
+                     const SaveFileInfo &saveInfo, bool hasSaveInfo)
+{
+    clearScreen();
+    cout << "\n╔══════════════════════════════════════╗" << endl;
+    cout << "║          POKÉMON ADVENTURE           ║" << endl;
+    cout << "╚══════════════════════════════════════╝" << endl;
+    cout << " Party: " << party.getCount() << "/" << MAX_PARTY_SIZE
+         << "       Active Box: " << pc.getCurrentBoxNumber() << "/"
+         << MAX_BOXES << endl;
+    cout << " Save: " << (saveFileExists(SAVE_FILE) ? "Available" : "Not found") << endl;
+    cout << " Last saved: "
+         << (hasSaveInfo
+                 ? (saveInfo.hasTimestamp ? saveInfo.savedAt
+                                          : "Not available (older save)")
+                 : (saveFileExists(SAVE_FILE) ? "Information unavailable" : "Never"))
+         << endl;
+    cout << "\n  ADVENTURE" << endl;
+    cout << "  1. Start an Expedition" << endl;
+    cout << "\n  MANAGEMENT" << endl;
+    cout << "  2. View Party" << endl;
+    cout << "  3. View PC" << endl;
+    cout << "  4. Pokédex" << endl;
+    cout << "\n  SYSTEM" << endl;
+    cout << "  5. Save / Load" << endl;
+    cout << "  6. Settings" << endl;
+    cout << "  0. Exit" << endl;
+}
+
+void displaySettingsMenu(const GameSettings &settings)
+{
+    clearScreen();
+    cout << "\n--- SETTINGS ---" << endl;
+    cout << "1. Sprites: " << (settings.spritesEnabled ? "On" : "Off") << endl;
+    cout << "2. Sound effects: " << (settings.soundEnabled ? "On" : "Off") << endl;
+    cout << "3. Colored type tags: " << (settings.typeTagsEnabled ? "On" : "Off") << endl;
+    cout << "4. Developer mode (unlock Pokédex): "
+         << (settings.developerMode ? "On" : "Off") << endl;
+    cout << "5. Confirm before releasing Pokémon: "
+         << (settings.confirmRelease ? "On" : "Off") << endl;
+    cout << "6. Confirm before overwriting save/session: "
+         << (settings.confirmOverwrite ? "On" : "Off") << endl;
+    cout << "7. Reset settings to defaults" << endl;
+    cout << "Settings are stored in the save file when you save the game." << endl;
+    cout << "0. Back" << endl;
+}
+
 int main()
 {
 #ifdef _WIN32
@@ -106,31 +153,10 @@ int main()
         int choice = -1;
         while (choice != 0)
         {
-            clearScreen();
-            cout << "\n╔══════════════════════════════════════╗" << endl;
-            cout << "║          POKÉMON ADVENTURE           ║" << endl;
-            cout << "╚══════════════════════════════════════╝" << endl;
-            cout << " Party: " << party.getCount() << "/" << MAX_PARTY_SIZE
-                 << "       Active Box: " << pc.getCurrentBoxNumber() << "/"
-                 << MAX_BOXES << endl;
-            cout << " Save: " << (saveFileExists(SAVE_FILE) ? "Available" : "Not found") << endl;
-            cout << " Last saved: "
-                 << (hasCurrentSaveInfo
-                         ? (currentSaveInfo.hasTimestamp ? currentSaveInfo.savedAt
-                                                         : "Not available (older save)")
-                         : (saveFileExists(SAVE_FILE) ? "Information unavailable" : "Never"))
-                 << endl;
-            cout << "\n  ADVENTURE" << endl;
-            cout << "  1. Start an Expedition" << endl;
-            cout << "\n  MANAGEMENT" << endl;
-            cout << "  2. View Party" << endl;
-            cout << "  3. View PC" << endl;
-            cout << "  4. Pokédex" << endl;
-            cout << "\n  SYSTEM" << endl;
-            cout << "  5. Save / Load" << endl;
-            cout << "  6. Settings" << endl;
-            cout << "  0. Exit" << endl;
-            choice = readMenuChoice("\nSelect option: ", 6);
+            displayMainMenu(party, pc, currentSaveInfo, hasCurrentSaveInfo);
+            choice = readMenuChoice("\nSelect option: ", 6, true, [&]() {
+                displayMainMenu(party, pc, currentSaveInfo, hasCurrentSaveInfo);
+            });
 
             if (choice == 1)
             {
@@ -160,22 +186,11 @@ int main()
                 bool settingsOpen = true;
                 while (settingsOpen)
                 {
-                    clearScreen();
                     const GameSettings &settings = getGameSettings();
-                    cout << "\n--- SETTINGS ---" << endl;
-                    cout << "1. Sprites: " << (settings.spritesEnabled ? "On" : "Off") << endl;
-                    cout << "2. Sound effects: " << (settings.soundEnabled ? "On" : "Off") << endl;
-                    cout << "3. Colored type tags: " << (settings.typeTagsEnabled ? "On" : "Off") << endl;
-                    cout << "4. Developer mode (unlock Pokédex): "
-                         << (settings.developerMode ? "On" : "Off") << endl;
-                    cout << "5. Confirm before releasing Pokémon: "
-                         << (settings.confirmRelease ? "On" : "Off") << endl;
-                    cout << "6. Confirm before overwriting save/session: "
-                         << (settings.confirmOverwrite ? "On" : "Off") << endl;
-                    cout << "7. Reset settings to defaults" << endl;
-                    cout << "Settings are stored in the save file when you save the game." << endl;
-                    cout << "0. Back" << endl;
-                    const int setting = readMenuChoice("\nSelect setting: ", 7);
+                    displaySettingsMenu(settings);
+                    const int setting = readMenuChoice(
+                        "\nSelect setting: ", 7, true,
+                        [&settings]() { displaySettingsMenu(settings); });
                     GameSettings &mutableSettings = getGameSettings();
                     if (setting == 0)
                     {
@@ -207,24 +222,28 @@ int main()
                                 }
                             }
                         }
-                        else if (setting == 5)
-                        {
-                            mutableSettings.confirmRelease = !mutableSettings.confirmRelease;
-                        }
-                        else if (setting == 6)
-                        {
-                            mutableSettings.confirmOverwrite = !mutableSettings.confirmOverwrite;
-                        }
-                        else if (setting == 7 && askYesNo("Reset all settings to defaults?"))
-                        {
-                            mutableSettings = GameSettings{};
-                        }
+                    }
+                    else if (setting == 5)
+                    {
+                        mutableSettings.confirmRelease = !mutableSettings.confirmRelease;
+                    }
+                    else if (setting == 6)
+                    {
+                        mutableSettings.confirmOverwrite = !mutableSettings.confirmOverwrite;
+                    }
+                    else if (setting == 7 &&
+                             askYesNo("Reset all settings to defaults?",
+                                      []() { displaySettingsMenu(getGameSettings()); }))
+                    {
+                        mutableSettings = GameSettings{};
                     }
                 }
             }
         }
 
-        if (askYesNo("Save before exiting?"))
+        if (askYesNo("Save before exiting?", [&]() {
+                displayMainMenu(party, pc, currentSaveInfo, hasCurrentSaveInfo);
+            }))
         {
             if (saveGame(SAVE_FILE, pc, party, registeredSpecies, encounteredSpecies))
                 cout << "[SUCCESS] Saved to " << SAVE_FILE << "." << endl;

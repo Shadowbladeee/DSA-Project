@@ -19,8 +19,8 @@ bool PCSystem::switchBox(int boxNumber)
 {
     if (boxNumber < 1 || boxNumber > MAX_BOXES)
     {
-        reportError("Invalid box number! Choose between 1 and " +
-                    to_string(MAX_BOXES) + ".");
+        reportInvalidInput("Invalid box number. Choose between 1 and " +
+                           to_string(MAX_BOXES) + ".");
         return false;
     }
     currentBoxIndex = boxNumber - 1;

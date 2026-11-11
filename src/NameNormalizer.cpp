@@ -53,6 +53,20 @@ bool isPreservedHyphenatedName(const string &name)
     return preserved.count(toLower(trim(name))) > 0;
 }
 
+bool isRegionalFormName(const string &name)
+{
+    const string lowered = toLower(name);
+    static const string regionalMarkers[] = {
+        "-alola", "-galar", "-hisui", "-paldea"};
+
+    for (const string &marker : regionalMarkers)
+    {
+        if (lowered.find(marker) != string::npos)
+            return true;
+    }
+    return false;
+}
+
 string normalizeSpecialDisplayName(const string &name)
 {
     const string lowered = toLower(trim(name));
@@ -99,6 +113,9 @@ string normalizePokemonName(const string &input)
         return specialDisplay;
 
     if (isPreservedHyphenatedName(name))
+        return name;
+
+    if (isRegionalFormName(name))
         return name;
 
     if (name.find('-') == string::npos)

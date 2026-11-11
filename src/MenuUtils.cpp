@@ -38,7 +38,7 @@ void printTypeChoice(size_t index, const string &type, bool useTag)
         cout << string(14 - visibleWidth, ' ');
 }
 
-string chooseType()
+void displayTypeSelection()
 {
     clearScreen();
     printMenuHeader("SELECT TYPE");
@@ -51,7 +51,13 @@ string chooseType()
     cout << right << endl;
     printMenuSeparator();
     cout << " 0. Cancel" << endl;
-    int pick = readMenuChoice("\nChoice: ", static_cast<int>(POKEMON_TYPES.size()));
+}
+
+string chooseType()
+{
+    displayTypeSelection();
+    int pick = readMenuChoice("\nChoice: ", static_cast<int>(POKEMON_TYPES.size()),
+                              true, displayTypeSelection);
     if (pick == 0)
         return "";
     return POKEMON_TYPES[pick - 1];
@@ -62,7 +68,7 @@ const vector<string> GENERATION_LABELS = {
     "Gen 4 (Sinnoh)", "Gen 5 (Unova)", "Gen 6 (Kalos)",
     "Gen 7 (Alola)", "Gen 8 (Galar + Hisui)", "Gen 9 (Paldea)"};
 
-int chooseGeneration()
+void displayGenerationSelection()
 {
     clearScreen();
     printMenuHeader("SELECT GENERATION");
@@ -72,13 +78,21 @@ int chooseGeneration()
     }
     printMenuSeparator();
     cout << "0. Cancel" << endl;
-    int pick = readMenuChoice("\nChoice: ", static_cast<int>(GENERATION_LABELS.size()));
+}
+
+int chooseGeneration()
+{
+    displayGenerationSelection();
+    int pick = readMenuChoice("\nChoice: ",
+                              static_cast<int>(GENERATION_LABELS.size()),
+                              true, displayGenerationSelection);
     return pick;
 }
 
-int promptDexNumber()
+int promptDexNumber(const function<void()> &redrawOnInvalid)
 {
-    return readNonNegativeNumber("\nEnter Dex number (0 to cancel): ");
+    return readNonNegativeNumber("\nEnter Dex number (0 to cancel): ",
+                                 redrawOnInvalid);
 }
 
 string toLowerStr(string s)
@@ -101,7 +115,8 @@ int readChoice()
     return value;
 }
 
-int readMenuChoice(const string &prompt, int maxOption, bool allowZero)
+int readMenuChoice(const string &prompt, int maxOption, bool allowZero,
+                   const function<void()> &redrawOnInvalid)
 {
     while (true)
     {
@@ -112,11 +127,14 @@ int readMenuChoice(const string &prompt, int maxOption, bool allowZero)
         if ((allowZero && choice == 0) || (choice >= 1 && choice <= maxOption))
             return choice;
 
-        reportError("Invalid Choice.");
+        reportInvalidInput("Invalid choice.");
+        if (redrawOnInvalid)
+            redrawOnInvalid();
     }
 }
 
-int readNonNegativeNumber(const string &prompt)
+int readNonNegativeNumber(const string &prompt,
+                          const function<void()> &redrawOnInvalid)
 {
     while (true)
     {
@@ -128,13 +146,15 @@ int readNonNegativeNumber(const string &prompt)
             return number;
 
         if (number == -1)
-            reportError("Please enter a number.");
+            reportInvalidInput("Please enter a number.");
         else
-            reportError("The number cannot be negative.");
+            reportInvalidInput("The number cannot be negative.");
+        if (redrawOnInvalid)
+            redrawOnInvalid();
     }
 }
 
-bool askYesNo(const string &prompt)
+bool askYesNo(const string &prompt, const function<void()> &redrawOnInvalid)
 {
     string answer;
     while (true)
@@ -154,52 +174,53 @@ bool askYesNo(const string &prompt)
         if (normalized == "n" || normalized == "no")
             return false;
 
-        reportError("Please type y or n.");
+        reportInvalidInput("Please type y or n.");
+        redrawOnInvalid();
     }
 }
 
+
+void displaySecondTypeSelection(const vector<string> &options)
+{
+    clearScreen();
+    printMenuHeader("SELECT TYPE 2");
+    for (size_t i = 0; i < options.size(); ++i)
+    {
+        printTypeChoice(i, options[i], i < POKEMON_TYPES.size());
+        if ((i + 1) % 3 == 0)
+            cout << endl;
+    }
+    cout << right << endl;
+    cout << "(Any = any second type, Mono = single-type Pokémon)" << endl;
+    printMenuSeparator();
+    cout << " 0. Cancel" << endl;
+}
 
 int chooseSecondType(const string &firstType)
 {
     vector<string> options = POKEMON_TYPES;
     options.push_back("Any");
     options.push_back("Mono");
-    string error;
 
     while (true)
     {
-        clearScreen();
-        printMenuHeader("SELECT TYPE 2");
-        for (size_t i = 0; i < options.size(); ++i)
-        {
-            printTypeChoice(i, options[i], i < POKEMON_TYPES.size());
-            if ((i + 1) % 3 == 0)
-                cout << endl;
-        }
-        cout << right << endl;
-        cout << "(Any = any second type, Mono = single-type only)" << endl;
-        if (!error.empty())
-        {
-            reportError(error);
-            error.clear();
-        }
-        printMenuSeparator();
-        cout << " 0. Cancel" << endl;
+        displaySecondTypeSelection(options);
 
-        const int pick = readMenuChoice("\nChoice: ", static_cast<int>(options.size()));
+        const int pick = readMenuChoice(
+            "\nChoice: ", static_cast<int>(options.size()), true,
+            [&options]() { displaySecondTypeSelection(options); });
         if (pick == 0 || pick > static_cast<int>(POKEMON_TYPES.size()))
             return pick;
         if (toLowerStr(options[pick - 1]) != toLowerStr(firstType))
             return pick;
 
-        error = "Type 2 must differ from Type 1. Choose Mono for a single-type Pokémon.";
-        reportError(error);
-        error.clear();
+        reportInvalidInput(
+            "Type 2 must differ from Type 1. Choose Mono for a single-type Pokémon.");
     }
 }
 
 
-// Returns a slot number, 0 = back, or NAV_NEXT / NAV_PREV
+// Returns a slot number, 0 = back, a navigation code, or NAV_INVALID.
 int readSlotOrNav(const string &prompt, int maxSlot)
 {
     while (true)
@@ -229,6 +250,7 @@ int readSlotOrNav(const string &prompt, int maxSlot)
         if (in >> v && (in >> ws).eof() && v >= 0 && v <= maxSlot)
             return v;
 
-        reportError("Invalid Choice.");
+        reportInvalidInput("Invalid choice.");
+        return NAV_INVALID;
     }
 }

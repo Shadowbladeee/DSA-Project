@@ -36,10 +36,21 @@ inline void waitForContinue()
     std::getline(std::cin, input);
 }
 
+inline void reportMessageAndWait(const std::string &label,
+                                 const std::string &message)
+{
+    std::cout << label << " " << message << std::endl;
+    waitForContinue();
+}
+
 inline void reportError(const std::string &message)
 {
-    std::cout << "[ERROR] " << message << std::endl;
-    waitForContinue();
+    reportMessageAndWait("[ERROR]", message);
+}
+
+inline void reportInvalidInput(const std::string &message)
+{
+    reportMessageAndWait("[INPUT ERROR]", message);
 }
 
 #endif

@@ -54,7 +54,12 @@ void depositPartyPokemonIntoFirstEmptySlot(DoublyLinkedList &party, PCSystem &pc
     cout << "First empty slot in [" << pc.getCurrentBoxName() << "]: "
          << firstEmptySlot << "/" << BOX_CAPACITY << endl;
     const int partySlot = readMenuChoice(
-        "Choose a party Pokémon to deposit (0 to cancel): ", party.getCount());
+        "Choose a party Pokémon to deposit (0 to cancel): ", party.getCount(), true,
+        [&party, &pc, firstEmptySlot]() {
+            displayParty(party);
+            cout << "First empty slot in [" << pc.getCurrentBoxName() << "]: "
+                 << firstEmptySlot << "/" << BOX_CAPACITY << endl;
+        });
     if (partySlot == 0)
         return;
 
@@ -116,27 +121,66 @@ bool changePokemonNickname(PokemonNode *pokemon)
     return true;
 }
 
+void showPartySlotActions(const DoublyLinkedList &party, const PCSystem &pc,
+                          int slot)
+{
+    clearScreen();
+    printMenuHeader("PARTY SLOT ACTIONS");
+    printPokemonSlotContext(getPokemonAtPosition(party, slot), "Party", slot);
+    cout << "1. Deposit to Active Box [" << pc.getCurrentBoxName() << "]" << endl;
+    cout << "2. Swap Position in Party" << endl;
+    cout << "3. Change Nickname" << endl;
+    cout << "4. View Pokédex Entry" << endl;
+    cout << "5. Release Pokémon" << endl;
+    printMenuSeparator();
+    cout << "0. Cancel" << endl;
+}
+
+void showPartySlotActionsOutsideBox(const DoublyLinkedList &party, int slot)
+{
+    clearScreen();
+    printMenuHeader("PARTY SLOT ACTIONS");
+    printPokemonSlotContext(getPokemonAtPosition(party, slot), "Party", slot);
+    cout << "1. Swap Position in Party" << endl;
+    cout << "2. Change Nickname" << endl;
+    cout << "3. View Pokédex Entry" << endl;
+    printMenuSeparator();
+    cout << "0. Cancel" << endl;
+}
+
+void showBoxSlotActions(PCSystem &pc, int slot)
+{
+    clearScreen();
+    printMenuHeader("BOX SLOT ACTIONS");
+    printPokemonSlotContext(
+        getPokemonAtPosition(pc.getCurrentList(), slot),
+        "Box " + to_string(pc.getCurrentBoxNumber()) + " (" +
+            pc.getCurrentBoxName() + ")",
+        slot);
+    cout << "1. Withdraw to Party" << endl;
+    cout << "2. Swap Position in Box" << endl;
+    cout << "3. Move to another Box" << endl;
+    cout << "4. Change Nickname" << endl;
+    cout << "5. View Pokédex Entry" << endl;
+    cout << "6. Release Pokémon" << endl;
+    printMenuSeparator();
+    cout << "0. Cancel" << endl;
+}
+
 void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
 {
     if (slot < 1 || slot > party.getCount())
     {
-        reportError("Invalid party slot position.");
+        reportInvalidInput("Invalid party slot position.");
         return;
     }
 
     while (true)
     {
-        clearScreen();
-        printMenuHeader("PARTY SLOT ACTIONS");
-        printPokemonSlotContext(getPokemonAtPosition(party, slot), "Party", slot);
-        cout << "1. Deposit to Active Box [" << pc.getCurrentBoxName() << "]" << endl;
-        cout << "2. Swap Position in Party" << endl;
-        cout << "3. Change Nickname" << endl;
-        cout << "4. View Pokédex Entry" << endl;
-        cout << "5. Release Pokémon" << endl;
-        printMenuSeparator();
-        cout << "0. Cancel" << endl;
-        int action = readMenuChoice("\nChoice: ", 5);
+        showPartySlotActions(party, pc, slot);
+        int action = readMenuChoice(
+            "\nChoice: ", 5, true,
+            [&party, &pc, slot]() { showPartySlotActions(party, pc, slot); });
         if (action == 0)
             break;
 
@@ -170,7 +214,10 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
                 continue;
             }
             int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
-                                           party.getCount());
+                                           party.getCount(), true,
+                                           [&party, &pc, slot]() {
+                                               showPartySlotActions(party, pc, slot);
+                                           });
             if (targetPos == 0)
                 continue;
             if (party.swapNodes(slot, targetPos))
@@ -180,7 +227,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             }
             else
             {
-                reportError("Invalid target position.");
+                reportInvalidInput("Invalid target position.");
                 continue;
             }
         }
@@ -204,7 +251,10 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
 
             const PokemonNode *p = nodeAt(party, slot);
             if (getGameSettings().confirmRelease &&
-                !askYesNo("Release " + p->nickname + "? This can't be undone."))
+                !askYesNo("Release " + p->nickname + "? This can't be undone.",
+                          [&party, &pc, slot]() {
+                              showPartySlotActions(party, pc, slot);
+                          }))
             {
                 cout << "Release cancelled." << endl;
                 waitForContinue();
@@ -223,7 +273,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         }
         else
         {
-            reportError("Invalid Choice.");
+            reportInvalidInput("Invalid choice.");
             continue;
         }
 
@@ -244,21 +294,18 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
             return;
         }
 
-        int slot = readMenuChoice("Select Slot # to manage (0 to go back): ", party.getCount());
+        int slot = readMenuChoice(
+            "Select Slot # to manage (0 to go back): ", party.getCount(), true,
+            [&party]() { displayParty(party); });
         if (slot == 0)
             return;
 
         while (true)
         {
-            clearScreen();
-            printMenuHeader("PARTY SLOT ACTIONS");
-            printPokemonSlotContext(getPokemonAtPosition(party, slot), "Party", slot);
-            cout << "1. Swap Position in Party" << endl;
-            cout << "2. Change Nickname" << endl;
-            cout << "3. View Pokédex Entry" << endl;
-            printMenuSeparator();
-            cout << "0. Cancel" << endl;
-            int action = readMenuChoice("\nChoice: ", 3);
+            showPartySlotActionsOutsideBox(party, slot);
+            int action = readMenuChoice(
+                "\nChoice: ", 3, true,
+                [&party, slot]() { showPartySlotActionsOutsideBox(party, slot); });
             if (action == 0)
                 break;
 
@@ -271,7 +318,10 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
                     continue;
                 }
                 int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
-                                               party.getCount());
+                                               party.getCount(), true,
+                                               [&party, slot]() {
+                                                   showPartySlotActionsOutsideBox(party, slot);
+                                               });
                 if (targetPos == 0)
                     continue;
                 if (party.swapNodes(slot, targetPos))
@@ -281,7 +331,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
                 }
                 else
                 {
-                    reportError("Invalid target position.");
+                    reportInvalidInput("Invalid target position.");
                     continue;
                 }
             }
@@ -297,7 +347,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
             }
             else
             {
-                reportError("Invalid Choice.");
+                reportInvalidInput("Invalid choice.");
                 continue;
             }
 
@@ -308,38 +358,21 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
     }
 }
 
-void handlePartySubMenuOutsideBox(DoublyLinkedList &party, PCSystem &pc)
-{
-    managePartyOutsideBox(party, pc);
-}
-
 void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
 {
     DoublyLinkedList &boxList = pc.getCurrentList();
     if (slot < 1 || slot > boxList.getCount())
     {
-        reportError("Invalid box slot position.");
+        reportInvalidInput("Invalid box slot position.");
         return;
     }
 
     while (true)
     {
-        clearScreen();
-        printMenuHeader("BOX SLOT ACTIONS");
-        printPokemonSlotContext(
-            getPokemonAtPosition(boxList, slot),
-            "Box " + to_string(pc.getCurrentBoxNumber()) + " (" +
-                pc.getCurrentBoxName() + ")",
-            slot);
-        cout << "1. Withdraw to Party" << endl;
-        cout << "2. Swap Position in Box" << endl;
-        cout << "3. Move to another Box" << endl;
-        cout << "4. Change Nickname" << endl;
-        cout << "5. View Pokédex Entry" << endl;
-        cout << "6. Release Pokémon" << endl;
-        printMenuSeparator();
-        cout << "0. Cancel" << endl;
-        int action = readMenuChoice("\nChoice: ", 6);
+        showBoxSlotActions(pc, slot);
+        int action = readMenuChoice(
+            "\nChoice: ", 6, true,
+            [&pc, slot]() { showBoxSlotActions(pc, slot); });
         if (action == 0)
             break;
 
@@ -368,7 +401,10 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
                 continue;
             }
             int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
-                                           boxList.getCount());
+                                           boxList.getCount(), true,
+                                           [&pc, slot]() {
+                                               showBoxSlotActions(pc, slot);
+                                           });
             if (targetPos == 0)
                 continue;
             if (boxList.swapNodes(slot, targetPos))
@@ -378,13 +414,18 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             }
             else
             {
-                reportError("Invalid target position.");
+                reportInvalidInput("Invalid target position.");
                 continue;
             }
         }
         else if (action == 3)
         {
-            int targetBox = readMenuChoice("\nEnter Target Box (1-30): ", MAX_BOXES, false);
+            int targetBox = readMenuChoice(
+                "\nEnter Target Box (1-30): ", MAX_BOXES, false,
+                [&pc, slot]() {
+                    showBoxSlotActions(pc, slot);
+                    cout << "Enter target box (1-" << MAX_BOXES << ")." << endl;
+                });
             int srcBox = pc.getCurrentBoxNumber();
             if (targetBox == srcBox)
             {
@@ -417,7 +458,10 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         {
             const PokemonNode *p = nodeAt(boxList, slot);
             if (getGameSettings().confirmRelease &&
-                !askYesNo("Release " + p->nickname + "? This can't be undone."))
+                !askYesNo("Release " + p->nickname + "? This can't be undone.",
+                          [&pc, slot]() {
+                              showBoxSlotActions(pc, slot);
+                          }))
             {
                 cout << "Release cancelled." << endl;
                 waitForContinue();
@@ -436,7 +480,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         }
         else
         {
-            reportError("Invalid Choice.");
+            reportInvalidInput("Invalid choice.");
             continue;
         }
 
@@ -485,6 +529,8 @@ void printSearchResults(PCSystem &pc, const string &title,
         const int selection = readSlotOrNav(
             "Result # to view | N = next page | P = previous page | 0 = back: ",
             static_cast<int>(pageEnd - pageStart));
+        if (selection == NAV_INVALID)
+            continue;
         if (selection == 0)
             return;
         if (selection == NAV_NEXT)
@@ -505,7 +551,7 @@ void printSearchResults(PCSystem &pc, const string &title,
         }
         if (selection < 1 || selection > static_cast<int>(pageEnd - pageStart))
         {
-            reportError("Invalid search result selection.");
+            reportInvalidInput("Invalid search result selection.");
             continue;
         }
 
@@ -563,7 +609,14 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "2. Party" << endl;
     printMenuSeparator();
     cout << "0. Back" << endl;
-    int target = readMenuChoice("\nChoice: ", 2);
+    int target = readMenuChoice("\nChoice: ", 2, true, [&pc]() {
+        clearScreen();
+        printMenuHeader("SORT POKÉMON");
+        cout << "1. Active Box [" << pc.getCurrentBoxName() << "]" << endl;
+        cout << "2. Party" << endl;
+        printMenuSeparator();
+        cout << "0. Back" << endl;
+    });
     if (target == 0)
         return;
 
@@ -581,7 +634,15 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     cout << "3. Dex Number" << endl;
     printMenuSeparator();
     cout << "0. Back" << endl;
-    int field = readMenuChoice("\nChoice: ", 3);
+    int field = readMenuChoice("\nChoice: ", 3, true, []() {
+        clearScreen();
+        printMenuHeader("SORT BY");
+        cout << "1. Name" << endl;
+        cout << "2. Type" << endl;
+        cout << "3. Dex Number" << endl;
+        printMenuSeparator();
+        cout << "0. Back" << endl;
+    });
     if (field == 0)
         return;
 
@@ -593,7 +654,14 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "2. Descending (Z-A)" << endl;
         printMenuSeparator();
         cout << "0. Back" << endl;
-        int dir = readMenuChoice("\nChoice: ", 2);
+        int dir = readMenuChoice("\nChoice: ", 2, true, []() {
+            clearScreen();
+            printMenuHeader("SORT BY NAME");
+            cout << "\n1. Ascending (A-Z)" << endl;
+            cout << "2. Descending (Z-A)" << endl;
+            printMenuSeparator();
+            cout << "0. Back" << endl;
+        });
         if (dir == 0)
             return;
 
@@ -616,7 +684,14 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "2. Descending (Fairy -> Normal)" << endl;
         printMenuSeparator();
         cout << "0. Back" << endl;
-        int dir = readMenuChoice("\nChoice: ", 2);
+        int dir = readMenuChoice("\nChoice: ", 2, true, []() {
+            clearScreen();
+            printMenuHeader("SORT BY TYPE");
+            cout << "\n1. Ascending (Normal -> Fairy)" << endl;
+            cout << "2. Descending (Fairy -> Normal)" << endl;
+            printMenuSeparator();
+            cout << "0. Back" << endl;
+        });
         if (dir == 0)
             return;
 
@@ -636,7 +711,14 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
         cout << "2. Descending (high -> low)" << endl;
         printMenuSeparator();
         cout << "0. Back" << endl;
-        int dir = readMenuChoice("\nChoice: ", 2);
+        int dir = readMenuChoice("\nChoice: ", 2, true, []() {
+            clearScreen();
+            printMenuHeader("SORT BY DEX NUMBER");
+            cout << "\n1. Ascending (low -> high)" << endl;
+            cout << "2. Descending (high -> low)" << endl;
+            printMenuSeparator();
+            cout << "0. Back" << endl;
+        });
         if (dir == 0)
             return;
 
@@ -809,6 +891,17 @@ void printBoxOverview(PCSystem &pc)
     waitForContinue();
 }
 
+void displayBoxSettingsMenu()
+{
+    clearScreen();
+    printMenuHeader("BOX SETTINGS");
+    cout << "1. Switch Active Box" << endl;
+    cout << "2. Rename Active Box" << endl;
+    cout << "3. View All Boxes Overview" << endl;
+    printMenuSeparator();
+    cout << "0. Back" << endl;
+}
+
 void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
 {
     int choice = -1;
@@ -826,7 +919,19 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
         printMenuSeparator();
         cout << "0. Back" << endl;
 
-        choice = readMenuChoice("\nSelect option: ", 5);
+        choice = readMenuChoice("\nSelect option: ", 5, true, [&pc, &party]() {
+            clearScreen();
+            printMenuHeader("POKÉMON STORAGE SYSTEM");
+            cout << "Active Box: [" << pc.getCurrentBoxName() << "]" << endl;
+            cout << "Party: " << party.getCount() << "/" << MAX_PARTY_SIZE << endl;
+            cout << "1. Manage Party (" << party.getCount() << "/" << MAX_PARTY_SIZE << ")" << endl;
+            cout << "2. Manage Active Box (" << pc.getCurrentBoxCount() << "/" << BOX_CAPACITY << ")" << endl;
+            cout << "3. Box Settings (Switch / Rename / Overview)" << endl;
+            cout << "4. Search Pokémon in PC" << endl;
+            cout << "5. Sort Pokémon" << endl;
+            printMenuSeparator();
+            cout << "0. Back" << endl;
+        });
         if (choice != -1)
         {
             if (choice == 1)
@@ -840,8 +945,10 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                         break;
                     }
 
-                    int slot = readMenuChoice("Select Slot # to manage (0 to go back): ",
-                                              party.getCount());
+                    int slot = readMenuChoice(
+                        "Select Slot # to manage (0 to go back): ",
+                        party.getCount(), true,
+                        [&party]() { displayParty(party); });
                     if (slot == 0)
                         break;
                     handlePartySubMenu(party, pc, slot);
@@ -854,6 +961,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     showActiveBox(pc);
                     int slot = readSlotOrNav("Slot # to manage | N = next | P = previous | G = grid/list | B = jump box | E = deposit to first empty slot | 0 = back: ",
                                              pc.getCurrentList().getCount());
+                    if (slot == NAV_INVALID)
+                        continue;
                     if (slot == 0)
                         break;
                     if (slot == NAV_NEXT)
@@ -875,7 +984,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                     else if (slot == NAV_BOX)
                     {
                         const int boxNumber = readMenuChoice(
-                            "Jump to box (1-30, 0 to cancel): ", MAX_BOXES);
+                            "Jump to box (1-30, 0 to cancel): ", MAX_BOXES, true,
+                            [&pc]() { showActiveBox(pc); });
                         if (boxNumber != 0)
                             pc.setCurrentBox(boxNumber);
                     }
@@ -891,20 +1001,17 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice == 3)
             {
-                clearScreen();
-                printMenuHeader("BOX SETTINGS");
-                cout << "1. Switch Active Box" << endl;
-                cout << "2. Rename Active Box" << endl;
-                cout << "3. View All Boxes Overview" << endl;
-                printMenuSeparator();
-                cout << "0. Back" << endl;
-                int sub = readMenuChoice("\nChoice: ", 3);
+                displayBoxSettingsMenu();
+                int sub = readMenuChoice("\nChoice: ", 3, true,
+                                         displayBoxSettingsMenu);
                 if (sub == 0)
                     continue;
 
                 if (sub == 1)
                 {
-                    int boxNum = readMenuChoice("\nEnter Box (1-30): ", MAX_BOXES, false);
+                    int boxNum = readMenuChoice(
+                        "\nEnter Box (1-30): ", MAX_BOXES, false,
+                        displayBoxSettingsMenu);
                     if (pc.switchBox(boxNum))
                         waitForContinue();
                 }
@@ -917,7 +1024,10 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                         if (!getline(cin, name))
                             return;
                         if (name.empty())
-                            reportError("Box name cannot be empty.");
+                        {
+                            reportInvalidInput("Box name cannot be empty.");
+                            displayBoxSettingsMenu();
+                        }
                     } while (name.empty());
                     pc.renameCurrentBox(name);
                     waitForContinue();
@@ -937,7 +1047,16 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 cout << "4. By Dex number" << endl;
                 printMenuSeparator();
                 cout << "0. Back" << endl;
-                int sub = readMenuChoice("\nChoice: ", 4);
+                int sub = readMenuChoice("\nChoice: ", 4, true, []() {
+                    clearScreen();
+                    printMenuHeader("SEARCH POKÉMON IN PC");
+                    cout << "1. By nickname / species" << endl;
+                    cout << "2. By type" << endl;
+                    cout << "3. By generation" << endl;
+                    cout << "4. By Dex number" << endl;
+                    printMenuSeparator();
+                    cout << "0. Back" << endl;
+                });
                 if (sub == 0)
                     continue;
 
@@ -984,7 +1103,16 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 }
                 else if (sub == 4)
                 {
-                    int dex = promptDexNumber();
+                    int dex = promptDexNumber([]() {
+                        clearScreen();
+                        printMenuHeader("SEARCH POKÉMON IN PC");
+                        cout << "1. By nickname / species" << endl;
+                        cout << "2. By type" << endl;
+                        cout << "3. By generation" << endl;
+                        cout << "4. By Dex number" << endl;
+                        printMenuSeparator();
+                        cout << "0. Back" << endl;
+                    });
                     if (dex != 0)
                     {
                         printSearchResults(pc, "DEX #" + to_string(dex), pc.searchByDexNumber(dex));
@@ -997,12 +1125,12 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice != 0)
             {
-                reportError("Invalid Choice.");
+                reportInvalidInput("Invalid choice.");
             }
         }
         else
         {
-            reportError("Please enter a number.");
+            reportInvalidInput("Please enter a number.");
         }
     }
 }
