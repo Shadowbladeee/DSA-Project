@@ -1,11 +1,18 @@
 #ifndef TYPE_TAGS_H
 #define TYPE_TAGS_H
 
+#include "GameSettings.h"
 #include <cctype>
 #include <string>
 
 inline std::string colorTypeTag(const std::string &type)
 {
+    std::string label = type;
+    for (char &character : label)
+        character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
+    if (!getGameSettings().typeTagsEnabled)
+        return label;
+
     struct TypeColor
     {
         const char *name;
@@ -37,10 +44,6 @@ inline std::string colorTypeTag(const std::string &type)
     std::string normalized = type;
     for (char &character : normalized)
         character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
-
-    std::string label = type;
-    for (char &character : label)
-        character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
 
     for (const TypeColor &color : colors)
     {

@@ -1,7 +1,12 @@
 #include "../include/SaveSystem.h"
+#include "../include/GameSettings.h"
+#include <ctime>
 #include <cstdio>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <set>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
 
@@ -9,7 +14,7 @@ using namespace std;
 
 namespace
 {
-const int SAVE_VERSION = 4;
+const int SAVE_VERSION = 6;
 
 struct SavedPokemon
 {
@@ -83,6 +88,29 @@ void clearList(DoublyLinkedList &list)
     while (!list.isEmpty())
         list.releaseByPosition(1);
 }
+
+string currentTimestamp()
+{
+    const time_t now = time(nullptr);
+    tm localTime = {};
+#ifdef _WIN32
+    if (localtime_s(&localTime, &now) != 0)
+        return "";
+#else
+    if (localtime_r(&now, &localTime) == nullptr)
+        return "";
+#endif
+
+    ostringstream result;
+    result << put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+    return result.str();
+}
+
+bool fileExists(const string &filename)
+{
+    ifstream file(filename, ios::binary);
+    return file.good();
+}
 } // namespace
 
 bool saveFileExists(const string &filename)
@@ -91,10 +119,135 @@ bool saveFileExists(const string &filename)
     return f.good();
 }
 
+bool readSaveFileInfo(const string &filename,
+                      const vector<SpeciesData *> &pokedex,
+                      SaveFileInfo &info, string &error)
+{
+    ifstream in(filename);
+    if (!in.is_open())
+    {
+        error = "Could not open " + filename + ".";
+        return false;
+    }
+
+    SaveFileInfo parsedInfo;
+    set<int> registeredDexNumbers;
+    set<int> encounteredDexNumbers;
+    bool sawVersion = false;
+    bool sawTimestamp = false;
+    int version = 0;
+    string line;
+    int lineNumber = 0;
+
+    while (getline(in, line))
+    {
+        ++lineNumber;
+        if (line.empty() || line == "\r")
+            continue;
+
+        const vector<string> tokens = parseCSVLine(line);
+        if (tokens.empty())
+            continue;
+
+        if (tokens[0] == "VERSION")
+        {
+            if (sawVersion || tokens.size() != 2 || !toInt(tokens[1], version) ||
+                version < 1 || version > SAVE_VERSION)
+            {
+                error = "Invalid save version on line " + to_string(lineNumber) + ".";
+                return false;
+            }
+            sawVersion = true;
+        }
+        else if (!sawVersion)
+        {
+            error = "Missing save version on line " + to_string(lineNumber) + ".";
+            return false;
+        }
+        else if (tokens[0] == "SAVED_AT")
+        {
+            if (version < 6 || sawTimestamp || tokens.size() != 2 || tokens[1].empty())
+            {
+                error = "Invalid save timestamp on line " + to_string(lineNumber) + ".";
+                return false;
+            }
+            parsedInfo.savedAt = tokens[1];
+            parsedInfo.hasTimestamp = true;
+            sawTimestamp = true;
+        }
+        else if (tokens[0] == "POKEMON")
+        {
+            int location = 0;
+            int speciesID = 0;
+            if (tokens.size() != 10 || !toInt(tokens[1], location) ||
+                !toInt(tokens[2], speciesID) || location < 0 || location > MAX_BOXES)
+            {
+                error = "Invalid Pokémon record on line " + to_string(lineNumber) + ".";
+                return false;
+            }
+
+            const SpeciesData *species =
+                version == 1 ? getSpeciesByPokedexNumber(pokedex, speciesID)
+                             : findByInternalID(pokedex, speciesID);
+            if (species == nullptr)
+            {
+                error = "Unknown species on line " + to_string(lineNumber) + ".";
+                return false;
+            }
+
+            if (location == 0)
+                ++parsedInfo.partyCount;
+            registeredDexNumbers.insert(species->pokedexID);
+            encounteredDexNumbers.insert(species->pokedexID);
+        }
+        else if (tokens[0] == "POKEDEX" || tokens[0] == "ENCOUNTERED")
+        {
+            int speciesID = 0;
+            if (tokens.size() != 2 || !toInt(tokens[1], speciesID))
+            {
+                error = "Invalid Pokédex record on line " + to_string(lineNumber) + ".";
+                return false;
+            }
+            const SpeciesData *species = findByInternalID(pokedex, speciesID);
+            if (species == nullptr)
+            {
+                error = "Unknown Pokédex species on line " + to_string(lineNumber) + ".";
+                return false;
+            }
+            if (tokens[0] == "POKEDEX")
+                registeredDexNumbers.insert(species->pokedexID);
+            encounteredDexNumbers.insert(species->pokedexID);
+        }
+    }
+
+    if (!sawVersion)
+    {
+        error = "Save file is empty.";
+        return false;
+    }
+    if (version >= 6 && !sawTimestamp)
+    {
+        error = "Save file is missing its timestamp.";
+        return false;
+    }
+
+    parsedInfo.registeredDexCount = registeredDexNumbers.size();
+    parsedInfo.encounteredDexCount = encounteredDexNumbers.size();
+    info = parsedInfo;
+    error.clear();
+    return true;
+}
+
 bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
               const set<int> &registeredSpecies, const set<int> &encounteredSpecies)
 {
     const string tmpName = filename + ".tmp";
+    const string savedAt = currentTimestamp();
+    if (savedAt.empty())
+    {
+        cout << "[ERROR] Could not determine the current date and time." << endl;
+        return false;
+    }
 
     {
         ofstream out(tmpName);
@@ -108,6 +261,12 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         out << "CURRENT_BOX," << pc.getCurrentBoxNumber() << "\n";
         for (int b = 1; b <= MAX_BOXES; ++b)
             out << "BOXNAME," << b << "," << quote(pc.getBoxName(b)) << "\n";
+
+        const GameSettings &settings = getGameSettings();
+        out << "SETTINGS," << settings.spritesEnabled << ","
+            << settings.soundEnabled << "," << settings.typeTagsEnabled << ","
+            << settings.developerMode << "\n";
+        out << "SAVED_AT," << quote(savedAt) << "\n";
 
         for (int id : registeredSpecies)
             out << "POKEDEX," << id << "\n";
@@ -124,14 +283,46 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
             cout << "[ERROR] Failed while writing the save file." << endl;
             return false;
         }
+        out.close();
+        if (!out)
+        {
+            cout << "[ERROR] Failed while closing the temporary save file." << endl;
+            return false;
+        }
     } // file is closed here
 
-    std::remove(filename.c_str()); // rename() won't overwrite an existing file on Windows
+    const string backupName = filename + ".bak";
+    const bool hadPreviousSave = fileExists(filename);
+    if (hadPreviousSave)
+    {
+        if (fileExists(backupName) && std::remove(backupName.c_str()) != 0)
+        {
+            cout << "[ERROR] Could not replace the previous backup " << backupName << "." << endl;
+            std::remove(tmpName.c_str());
+            return false;
+        }
+        if (std::rename(filename.c_str(), backupName.c_str()) != 0)
+        {
+            cout << "[ERROR] Could not back up the existing save; it was left unchanged." << endl;
+            std::remove(tmpName.c_str());
+            return false;
+        }
+    }
+
     if (std::rename(tmpName.c_str(), filename.c_str()) != 0)
     {
         cout << "[ERROR] Could not finalize the save file." << endl;
+        if (hadPreviousSave && std::rename(backupName.c_str(), filename.c_str()) != 0)
+        {
+            cout << "[ERROR] The previous save remains at " << backupName
+                 << " and could not be restored automatically." << endl;
+        }
+        std::remove(tmpName.c_str());
         return false;
     }
+
+    if (hadPreviousSave)
+        cout << "[INFO] Previous save backed up to " << backupName << "." << endl;
     return true;
 }
 
@@ -148,7 +339,10 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
 
     int currentBox = 1;
     bool sawVersion = false;
+    bool sawSettings = false;
+    bool sawTimestamp = false;
     int version = 0;
+    GameSettings loadedSettings;
     vector<string> boxNames(MAX_BOXES + 1);
     for (int b = 1; b <= MAX_BOXES; ++b)
         boxNames[b] = "Box " + to_string(b);
@@ -198,6 +392,29 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
                 return fail("bad BOXNAME");
             boxNames[b] = t[2];
         }
+        else if (tag == "SETTINGS")
+        {
+            int sprites = 0, sound = 0, typeTags = 0, developer = 0;
+            if (version < 5 || sawSettings || t.size() != 5 ||
+                !toInt(t[1], sprites) || !toInt(t[2], sound) ||
+                !toInt(t[3], typeTags) || !toInt(t[4], developer) ||
+                (sprites != 0 && sprites != 1) ||
+                (sound != 0 && sound != 1) ||
+                (typeTags != 0 && typeTags != 1) ||
+                (developer != 0 && developer != 1))
+                return fail("bad SETTINGS record");
+            loadedSettings.spritesEnabled = sprites != 0;
+            loadedSettings.soundEnabled = sound != 0;
+            loadedSettings.typeTagsEnabled = typeTags != 0;
+            loadedSettings.developerMode = developer != 0;
+            sawSettings = true;
+        }
+        else if (tag == "SAVED_AT")
+        {
+            if (version < 6 || sawTimestamp || t.size() != 2 || t[1].empty())
+                return fail("bad SAVED_AT record");
+            sawTimestamp = true;
+        }
         else if (tag == "POKEDEX")
         {
             int id = 0;
@@ -246,6 +463,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
 
     if (!sawVersion)
         return fail("empty file");
+    if (version >= 6 && !sawTimestamp)
+        return fail("missing SAVED_AT record");
 
     clearList(party);
     for (int b = 1; b <= MAX_BOXES; ++b)
@@ -264,5 +483,17 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     pc.setCurrentBox(currentBox);
     registeredSpecies = std::move(loadedRegistrations);
     encounteredSpecies = std::move(loadedEncounters);
+    getGameSettings() = loadedSettings;
+    if (loadedSettings.developerMode)
+    {
+        for (const SpeciesData *species : pokedex)
+        {
+            if (species != nullptr)
+            {
+                registeredSpecies.insert(species->internalID);
+                encounteredSpecies.insert(species->internalID);
+            }
+        }
+    }
     return true;
 }

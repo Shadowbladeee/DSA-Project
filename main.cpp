@@ -5,6 +5,7 @@
 #include "include/PCMenu.h"
 #include "include/PCSystem.h"
 #include "include/PokedexMenu.h"
+#include "include/GameSettings.h"
 #include "include/SaveMenu.h"
 #include "include/SaveSystem.h"
 #include <iostream>
@@ -84,6 +85,12 @@ int main()
         return 1;
     }
 
+    SaveFileInfo currentSaveInfo;
+    string saveInfoError;
+    bool hasCurrentSaveInfo = saveFileExists(SAVE_FILE) &&
+                              readSaveFileInfo(SAVE_FILE, pokedex,
+                                               currentSaveInfo, saveInfoError);
+
     {
         PCSystem pc;
         DoublyLinkedList party;
@@ -119,6 +126,12 @@ int main()
                  << "       Active Box: " << pc.getCurrentBoxNumber() << "/"
                  << MAX_BOXES << endl;
             cout << " Save: " << (saveFileExists(SAVE_FILE) ? "Available" : "Not found") << endl;
+            cout << " Last saved: "
+                 << (hasCurrentSaveInfo
+                         ? (currentSaveInfo.hasTimestamp ? currentSaveInfo.savedAt
+                                                         : "Not available (older save)")
+                         : (saveFileExists(SAVE_FILE) ? "Information unavailable" : "Never"))
+                 << endl;
             cout << "\n  ADVENTURE" << endl;
             cout << "  1. Start an Expedition" << endl;
             cout << "\n  MANAGEMENT" << endl;
@@ -127,8 +140,9 @@ int main()
             cout << "  4. Pokédex" << endl;
             cout << "\n  SYSTEM" << endl;
             cout << "  5. Save / Load" << endl;
+            cout << "  6. Settings" << endl;
             cout << "  0. Exit" << endl;
-            choice = readMenuChoice("\nSelect option: ", 5);
+            choice = readMenuChoice("\nSelect option: ", 6);
 
             if (choice == 1)
             {
@@ -149,6 +163,59 @@ int main()
             else if (choice == 5)
             {
                 handleSaveMenu(pc, party, pokedex, registeredSpecies, encounteredSpecies);
+                hasCurrentSaveInfo = saveFileExists(SAVE_FILE) &&
+                                     readSaveFileInfo(SAVE_FILE, pokedex,
+                                                      currentSaveInfo, saveInfoError);
+            }
+            else if (choice == 6)
+            {
+                bool settingsOpen = true;
+                while (settingsOpen)
+                {
+                    clearScreen();
+                    const GameSettings &settings = getGameSettings();
+                    cout << "\n--- SETTINGS ---" << endl;
+                    cout << "1. Sprites: " << (settings.spritesEnabled ? "On" : "Off") << endl;
+                    cout << "2. Sound effects: " << (settings.soundEnabled ? "On" : "Off") << endl;
+                    cout << "3. Type tags: " << (settings.typeTagsEnabled ? "On" : "Off") << endl;
+                    cout << "4. Developer mode (unlock Pokédex): "
+                         << (settings.developerMode ? "On" : "Off") << endl;
+                    cout << "Settings are stored in the save file when you save the game." << endl;
+                    cout << "0. Back" << endl;
+                    const int setting = readMenuChoice("\nSelect setting: ", 4);
+                    GameSettings &mutableSettings = getGameSettings();
+                    if (setting == 0)
+                    {
+                        settingsOpen = false;
+                    }
+                    else if (setting == 1)
+                    {
+                        mutableSettings.spritesEnabled = !mutableSettings.spritesEnabled;
+                    }
+                    else if (setting == 2)
+                    {
+                        mutableSettings.soundEnabled = !mutableSettings.soundEnabled;
+                    }
+                    else if (setting == 3)
+                    {
+                        mutableSettings.typeTagsEnabled = !mutableSettings.typeTagsEnabled;
+                    }
+                    else if (setting == 4)
+                    {
+                        mutableSettings.developerMode = !mutableSettings.developerMode;
+                        if (mutableSettings.developerMode)
+                        {
+                            for (const SpeciesData *species : pokedex)
+                            {
+                                if (species != nullptr)
+                                {
+                                    registeredSpecies.insert(species->internalID);
+                                    encounteredSpecies.insert(species->internalID);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 

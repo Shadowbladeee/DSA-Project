@@ -46,6 +46,26 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
             waitForContinue();
             return;
         }
+        SaveFileInfo info;
+        string infoError;
+        clearScreen();
+        printMenuHeader("SAVE FILE INFORMATION");
+        if (readSaveFileInfo(SAVE_FILE, pokedex, info, infoError))
+        {
+            cout << "Last saved: "
+                 << (info.hasTimestamp ? info.savedAt : "Not available (older save)") << endl;
+            cout << "Party: " << info.partyCount << "/" << MAX_PARTY_SIZE << endl;
+            cout << "Pokédex registered: " << info.registeredDexCount << "/1025" << endl;
+            cout << "Pokédex encountered: " << info.encounteredDexCount << "/1025" << endl;
+        }
+        else
+        {
+            cout << "[WARNING] Could not read save summary: " << infoError << endl;
+            cout << "The full save validation will happen during loading." << endl;
+        }
+        cout << "Backup available: "
+             << (saveFileExists(SAVE_FILE + ".bak") ? "Yes" : "No") << endl;
+        waitForContinue();
         if (!askYesNo("Loading replaces your current party and boxes. Continue?"))
         {
             cout << "Load cancelled." << endl;

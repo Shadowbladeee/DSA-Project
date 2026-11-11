@@ -157,7 +157,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         }
         else if (action == 4)
         {
-            printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
+            browsePokemonSummaries(party, slot);
             continue;
         }
         else if (action == 5)
@@ -257,7 +257,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
             }
             else if (action == 3)
             {
-                printPokemonSummary(getPokemonAtPosition(party, slot), true, true);
+                browsePokemonSummaries(party, slot);
                 continue;
             }
             else
@@ -377,7 +377,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         }
         else if (action == 5)
         {
-            printPokemonSummary(getPokemonAtPosition(boxList, slot), true, true);
+            browsePokemonSummaries(boxList, slot);
             continue;
         }
         else if (action == 6)

@@ -1,5 +1,7 @@
 #include "../include/PokemonSummary.h"
 #include "../include/ConsoleUtils.h"
+#include "../include/GameSettings.h"
+#include "../include/MenuUtils.h"
 #include "../include/TypeTags.h"
 #include <iostream>
 #include <fstream>
@@ -79,6 +81,8 @@ string formatAbilities(string abilitiesStr)
 
 void playPokemonCry(int pokedexID)
 {
+    if (!getGameSettings().soundEnabled)
+        return;
 #ifdef _WIN32
     string cryPath = "assets/cries/" + to_string(pokedexID) + ".wav";
     PlaySoundA(cryPath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
@@ -87,6 +91,9 @@ void playPokemonCry(int pokedexID)
 
 void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int targetBoxHeight)
 {
+    if (!getGameSettings().spritesEnabled)
+        return;
+
     int fullWidth, height, channels;
     unsigned char *img = stbi_load(filepath.c_str(), &fullWidth, &height, &channels, 4);
 
@@ -311,6 +318,41 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
     }
 
     printSummary(pokemon, pokemon->species, playCry, showSprite);
+}
+
+void browsePokemonSummaries(const DoublyLinkedList &list, int position)
+{
+    if (position < 1 || position > list.getCount())
+        return;
+
+    while (true)
+    {
+        const PokemonNode *pokemon = list.getHead();
+        for (int current = 1; pokemon != nullptr && current < position; ++current)
+            pokemon = pokemon->next;
+
+        if (pokemon == nullptr)
+        {
+            cout << "[ERROR] Could not find that Pokémon.\n";
+            return;
+        }
+
+        printSummary(pokemon, pokemon->species, true, true, false);
+        const int navigation = readSlotOrNav(
+            "N = next Pokémon | P = previous Pokémon | 0 = back: ",
+            0);
+        if (navigation == 0)
+            return;
+        if (navigation == NAV_NEXT && position < list.getCount())
+            ++position;
+        else if (navigation == NAV_PREV && position > 1)
+            --position;
+        else
+        {
+            cout << "[ERROR] No Pokémon in that direction.\n";
+            waitForContinue();
+        }
+    }
 }
 
 void printSpeciesSummary(const SpeciesData *species, bool encountered, bool caught,
