@@ -22,7 +22,7 @@ bool PCSystem::switchBox(int boxNumber)
         return false;
     }
     currentBoxIndex = boxNumber - 1;
-    cout << "Switched to [" << boxes[currentBoxIndex].name << "]" << endl;
+    cout << "[SUCCESS] Switched to [" << boxes[currentBoxIndex].name << "]." << endl;
     return true;
 }
 
@@ -33,7 +33,8 @@ bool PCSystem::renameCurrentBox(const string &newName)
         cout << "[ERROR] Box name cannot be empty." << endl;
         return false;
     }
-    cout << "Renamed [" << boxes[currentBoxIndex].name << "] to [" << newName << "]" << endl;
+    cout << "[SUCCESS] Renamed [" << boxes[currentBoxIndex].name << "] to ["
+         << newName << "]." << endl;
     boxes[currentBoxIndex].name = newName;
     return true;
 }

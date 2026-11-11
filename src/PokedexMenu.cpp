@@ -124,7 +124,7 @@ void showPokedexCompletion(const vector<SpeciesData *> &pokedex,
                                       : 100.0 * totalRegistered / entries.size();
 
     clearScreen();
-    cout << "\n=== POKÉDEX COMPLETION ===" << endl;
+    printMenuHeader("POKÉDEX COMPLETION");
     cout << "Overall: " << totalRegistered << "/" << entries.size()
          << " (" << fixed << setprecision(1) << overallPercent << "%)" << endl;
     cout << fillBar(totalRegistered, static_cast<int>(entries.size()), 30) << endl;
@@ -280,8 +280,7 @@ void showPokedexEntryByNumber(int dexNumber,
     }
 
     clearScreen();
-    cout << "\n=== POKÉDEX ENTRY #" << setw(3) << setfill('0') << dexNumber
-         << setfill(' ') << " ===\n";
+    printMenuHeader("POKÉDEX ENTRY #" + to_string(dexNumber));
     cout << "[EMPTY ENTRY] No species data is available for this Dex number.\n";
     waitForContinue();
 }
@@ -300,7 +299,7 @@ void browsePokedexEntries(vector<const SpeciesData *> entries,
         clearScreen();
         const size_t pageStart = page * pageSize;
         const size_t pageEnd = min(entries.size(), pageStart + pageSize);
-        cout << "\n=== " << title << " (" << entries.size() << " entries) ===" << endl;
+        printMenuHeader(title + " (" + to_string(entries.size()) + " entries)");
         if (entries.empty())
         {
             cout << "(No matches)" << endl;
@@ -380,10 +379,11 @@ void searchPokedex(const vector<SpeciesData *> &pokedex,
                    const set<int> &encounteredSpecies)
 {
     clearScreen();
-    cout << "\n--- SEARCH POKÉDEX ---" << endl;
+    printMenuHeader("SEARCH POKÉDEX");
     cout << "1. By nickname / species" << endl;
     cout << "2. By type" << endl;
     cout << "3. By generation" << endl;
+    printMenuSeparator();
     cout << "0. Back" << endl;
     const int choice = readMenuChoice("\nChoice: ", 3);
     if (choice == 0)
@@ -487,11 +487,12 @@ void handlePokedexMenu(const vector<SpeciesData *> &pokedex,
     while (true)
     {
         clearScreen();
-        cout << "\n=== POKÉDEX ===" << endl;
+        printMenuHeader("POKÉDEX");
         cout << "1. Completion" << endl;
         cout << "2. Browse entries" << endl;
         cout << "3. Search entries" << endl;
         cout << "4. Go to Dex number" << endl;
+        printMenuSeparator();
         cout << "0. Back" << endl;
         const int choice = readMenuChoice("\nChoice: ", 4);
         if (choice == 0)

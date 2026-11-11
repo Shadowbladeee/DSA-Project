@@ -14,9 +14,10 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
                     set<int> &encounteredSpecies)
 {
     clearScreen();
-    cout << "\n--- SAVE / LOAD ---" << endl;
+    printMenuHeader("SAVE / LOAD");
     cout << "1. Save" << endl;
     cout << "2. Load" << endl;
+    printMenuSeparator();
     cout << "0. Back" << endl;
     int choice = readMenuChoice("\nChoice: ", 2);
     if (choice == 0)

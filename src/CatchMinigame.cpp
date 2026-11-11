@@ -5,8 +5,10 @@
 #include <string>
 #include <ctime>
 #include <algorithm>
+#include <cctype>
 #include <iomanip>
 #include <limits>
+#include <map>
 #include <random>
 #include <set>
 #include <unordered_map>
@@ -46,12 +48,16 @@ namespace
     bool expeditionOver = false;
     bool lastChanceUsed = false;
     int endingBonus = 0;
+    string expeditionHabitat;
     const vector<SpeciesData *> *speciesDB = nullptr;
     DoublyLinkedList *partyList = nullptr;
     PCSystem *pcSystem = nullptr;
     set<int> *registeredSpecies = nullptr;
     set<int> *encounteredSpecies = nullptr;
     unordered_map<int, unordered_set<string>> usedEncounterModifiers;
+
+    bool readMenuChoice(const string &prompt, int minChoice, int maxChoice,
+                        int &choice);
 
     struct EncounterModifiers
     {
@@ -64,6 +70,88 @@ namespace
     {
         static mt19937 generator(random_device{}());
         return generator;
+    }
+
+    string normalizeHabitat(const string &habitat)
+    {
+        const size_t first = habitat.find_first_not_of(" \t\r\n");
+        if (first == string::npos)
+            return "";
+        const size_t last = habitat.find_last_not_of(" \t\r\n");
+        string normalized = habitat.substr(first, last - first + 1);
+        transform(normalized.begin(), normalized.end(), normalized.begin(),
+                  [](unsigned char character) {
+                      return static_cast<char>(tolower(character));
+                  });
+        return normalized;
+    }
+
+    string formatHabitat(const string &habitat)
+    {
+        string label = habitat;
+        bool capitalizeNext = true;
+        for (char &character : label)
+        {
+            if (character == '-')
+            {
+                character = ' ';
+                capitalizeNext = true;
+            }
+            else if (isspace(static_cast<unsigned char>(character)))
+            {
+                capitalizeNext = true;
+            }
+            else if (capitalizeNext)
+            {
+                character = static_cast<char>(
+                    toupper(static_cast<unsigned char>(character)));
+                capitalizeNext = false;
+            }
+        }
+        return label;
+    }
+
+    bool chooseExpeditionHabitat(const vector<SpeciesData *> &database,
+                                string &selectedHabitat)
+    {
+        map<string, string> habitatsByNormalizedName;
+        for (const SpeciesData *species : database)
+        {
+            if (species == nullptr)
+                continue;
+            const string normalized = normalizeHabitat(species->habitat);
+            if (!normalized.empty())
+                habitatsByNormalizedName.emplace(normalized, species->habitat);
+        }
+
+        clearScreen();
+        printMenuHeader("SELECT EXPEDITION HABITAT");
+        cout << "Choose where to explore. Pokémon without a listed habitat can appear anywhere.\n";
+        cout << "1. Anywhere (all habitats)\n";
+        int option = 2;
+        for (const auto &habitat : habitatsByNormalizedName)
+            cout << option++ << ". " << formatHabitat(habitat.second) << "\n";
+        printMenuSeparator();
+        cout << "0. Cancel\n";
+
+        int choice = 0;
+        if (!readMenuChoice(
+                "\nSelect habitat: ", 0,
+                static_cast<int>(habitatsByNormalizedName.size()) + 1,
+                choice))
+            return false;
+        if (choice == 0)
+            return false;
+        if (choice == 1)
+        {
+            selectedHabitat.clear();
+            return true;
+        }
+
+        auto habitat = habitatsByNormalizedName.begin();
+        advance(habitat, choice - 2);
+        selectedHabitat = habitat->second;
+        return true;
     }
 
     // --- Math & Probability Helpers ---
@@ -191,18 +279,23 @@ namespace
         }
     }
 
+    void printInventoryStatus()
+    {
+        cout << "Resources: Safari Balls " << playerInv.balls << "/"
+             << playerInv.maxBalls << " | Rocks " << playerInv.rocks << "/"
+             << playerInv.maxRocks << " | Bait " << playerInv.bait << "/"
+             << playerInv.maxBait << "\n";
+    }
+
     // --- Systems Implementation ---
 
     void showInventory()
     {
         clearScreen();
-        cout << "\n====================================\n";
-        cout << "        CURRENT INVENTORY           \n";
-        cout << "====================================\n";
+        printMenuHeader("CURRENT INVENTORY");
         cout << "  Safari Balls : " << playerInv.balls << " / " << playerInv.maxBalls << "\n";
         cout << "  Rocks        : " << playerInv.rocks << " / " << playerInv.maxRocks << "\n";
         cout << "  Bait         : " << playerInv.bait << " / " << playerInv.maxBait << "\n";
-        cout << "====================================\n\n";
         waitForContinue();
     }
 
@@ -287,9 +380,27 @@ namespace
             return false;
         }
 
-        uniform_int_distribution<size_t> distribution(0, speciesDB->size() - 1);
-        const size_t idx = distribution(getRandomGenerator());
-        pokemon = (*speciesDB)[idx];
+        vector<const SpeciesData *> eligibleSpecies;
+        const string selectedHabitat = normalizeHabitat(expeditionHabitat);
+        for (const SpeciesData *species : *speciesDB)
+        {
+            if (species == nullptr)
+                continue;
+
+            const string habitat = normalizeHabitat(species->habitat);
+            if (selectedHabitat.empty() || habitat.empty() ||
+                habitat == selectedHabitat)
+                eligibleSpecies.push_back(species);
+        }
+
+        if (eligibleSpecies.empty())
+        {
+            cout << "[ERROR] No Pokémon are available for this expedition habitat.\n";
+            return false;
+        }
+
+        uniform_int_distribution<size_t> distribution(0, eligibleSpecies.size() - 1);
+        pokemon = eligibleSpecies[distribution(getRandomGenerator())];
         return true;
     }
 
@@ -394,15 +505,15 @@ namespace
         double fleeMod = 0.0;
         bool active = true;
 
+        printMenuHeader("ENCOUNTER");
         while (active)
         {
-            cout << "\n[ENCOUNTER MENU] (Balls: " << playerInv.balls
-                 << " | Rocks: " << playerInv.rocks
-                 << " | Bait: " << playerInv.bait << ")\n";
+            printInventoryStatus();
             cout << "1. Throw Safari Ball\n";
             cout << "2. Throw Rock (+20% Catch, +15% Flee)\n";
             cout << "3. Throw Bait (-10% Catch, -15% Flee)\n";
             cout << "4. Run Away\n";
+            printMenuSeparator();
 
             int action;
             if (!readMenuChoice("Choice: ", 1, 4, action))
@@ -662,9 +773,7 @@ namespace
     void showExpeditionSummary()
     {
         clearScreen();
-        cout << "\n=======================================================\n";
-        cout << "               EXPEDITION SUMMARY                      \n";
-        cout << "=======================================================\n";
+        printMenuHeader("EXPEDITION SUMMARY");
         cout << "  Total Encounters    : " << stats.encountered << "\n";
         cout << "  Pokémon Caught      : " << stats.caught << "\n";
         cout << "  Pokémon Fled        : " << stats.pokemonFled << "\n";
@@ -674,7 +783,7 @@ namespace
 
         cout << "  Catch Efficiency    : " << fixed << setprecision(2) << calculateCatchEfficiency() << "%\n";
         cout << "  Expedition Grade    : " << calculateExpeditionGrade() << "\n";
-        cout << "=======================================================\n\n";
+        printMenuSeparator();
         waitForContinue();
     }
 
@@ -683,10 +792,18 @@ namespace
         while (!expeditionOver)
         {
             clearScreen();
-            cout << "\n=== SAFARI EXPEDITION MENU ===\n";
+            printMenuHeader("SAFARI EXPEDITION");
+            cout << "Habitat: "
+                 << (expeditionHabitat.empty() ? "Anywhere"
+                                               : formatHabitat(expeditionHabitat))
+                 << "\n";
+            printInventoryStatus();
+            cout << "Progress: " << stats.encountered << " encountered | "
+                 << stats.caught << " caught\n";
             cout << "1. Explore\n";
             cout << "2. View Inventory\n";
             cout << "3. End Expedition\n";
+            printMenuSeparator();
 
             int choice;
             if (!readMenuChoice("Choice: ", 1, 3, choice))
@@ -732,6 +849,9 @@ void startExpedition(const vector<SpeciesData *> &speciesDatabase,
         cout << "[ERROR] The Pokémon database is empty; cannot start an expedition.\n";
         return;
     }
+
+    if (!chooseExpeditionHabitat(speciesDatabase, expeditionHabitat))
+        return;
 
     speciesDB = &speciesDatabase;
     partyList = &party;
