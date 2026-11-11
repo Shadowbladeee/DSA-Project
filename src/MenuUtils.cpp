@@ -41,7 +41,7 @@ void printTypeChoice(size_t index, const string &type, bool useTag)
 string chooseType()
 {
     clearScreen();
-    cout << "\n--- SELECT TYPE ---" << endl;
+    printMenuHeader("SELECT TYPE");
     for (size_t i = 0; i < POKEMON_TYPES.size(); ++i)
     {
         printTypeChoice(i, POKEMON_TYPES[i], true);
@@ -49,6 +49,7 @@ string chooseType()
             cout << endl;
     }
     cout << right << endl;
+    printMenuSeparator();
     cout << " 0. Cancel" << endl;
     int pick = readMenuChoice("\nChoice: ", static_cast<int>(POKEMON_TYPES.size()));
     if (pick == 0)
@@ -64,11 +65,12 @@ const vector<string> GENERATION_LABELS = {
 int chooseGeneration()
 {
     clearScreen();
-    cout << "\n--- SELECT GENERATION ---" << endl;
+    printMenuHeader("SELECT GENERATION");
     for (size_t i = 0; i < GENERATION_LABELS.size(); ++i)
     {
         cout << (i + 1) << ". " << GENERATION_LABELS[i] << endl;
     }
+    printMenuSeparator();
     cout << "0. Cancel" << endl;
     int pick = readMenuChoice("\nChoice: ", static_cast<int>(GENERATION_LABELS.size()));
     return pick;
@@ -167,7 +169,7 @@ int chooseSecondType(const string &firstType)
     while (true)
     {
         clearScreen();
-        cout << "\n--- SELECT TYPE 2 ---" << endl;
+        printMenuHeader("SELECT TYPE 2");
         for (size_t i = 0; i < options.size(); ++i)
         {
             printTypeChoice(i, options[i], i < POKEMON_TYPES.size());
@@ -178,6 +180,7 @@ int chooseSecondType(const string &firstType)
         cout << "(Any = any second type, Mono = single-type only)" << endl;
         if (!error.empty())
             cout << "[ERROR] " << error << endl;
+        printMenuSeparator();
         cout << " 0. Cancel" << endl;
 
         const int pick = readMenuChoice("\nChoice: ", static_cast<int>(options.size()));
