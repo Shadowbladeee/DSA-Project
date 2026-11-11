@@ -25,7 +25,7 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "user32.lib")
 
-void setupConsoleAndFullscreen()
+void setupConsoleOutput()
 {
     SetConsoleOutputCP(CP_UTF8);
 
@@ -34,18 +34,6 @@ void setupConsoleAndFullscreen()
     GetConsoleMode(hOut, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
-
-    Sleep(200);
-
-    INPUT in[2] = {};
-    in[0].type = INPUT_KEYBOARD;
-    in[0].ki.wVk = VK_F11;
-
-    in[1].type = INPUT_KEYBOARD;
-    in[1].ki.wVk = VK_F11;
-    in[1].ki.dwFlags = KEYEVENTF_KEYUP;
-
-    SendInput(2, in, sizeof(INPUT));
 }
 
 #endif
@@ -68,20 +56,20 @@ int main()
 {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
-    setupConsoleAndFullscreen();
+    setupConsoleOutput();
 #endif
 
     const string csvFilename = "pokemon_complete.csv";
     if (!checkCSVFile(csvFilename))
     {
-        cout << "[ERROR] Could not find or open " << csvFilename << endl;
+        reportError("Could not find or open " + csvFilename + ".");
         return 1;
     }
 
     vector<SpeciesData *> pokedex = loadSpeciesDatabase(csvFilename);
     if (pokedex.empty())
     {
-        cout << "[ERROR] Failed to load Pokedex database." << endl;
+        reportError("Failed to load Pokedex database.");
         return 1;
     }
 
@@ -114,7 +102,7 @@ int main()
 
             registerListSpecies(registeredSpecies, encounteredSpecies, party);
         }
-        
+
         int choice = -1;
         while (choice != 0)
         {

@@ -36,4 +36,10 @@ inline void waitForContinue()
     std::getline(std::cin, input);
 }
 
+inline void reportError(const std::string &message)
+{
+    std::cout << "[ERROR] " << message << std::endl;
+    waitForContinue();
+}
+
 #endif

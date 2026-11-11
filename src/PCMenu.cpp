@@ -52,12 +52,12 @@ void printPokemonSlotContext(const PokemonNode *pokemon, const string &location,
     printMenuSeparator();
 }
 
-void changePokemonNickname(PokemonNode *pokemon)
+bool changePokemonNickname(PokemonNode *pokemon)
 {
     if (pokemon == nullptr)
     {
-        cout << "[ERROR] Could not find that Pokémon." << endl;
-        return;
+        reportError("Could not find that Pokémon.");
+        return false;
     }
 
     cout << "Current nickname: " << pokemon->nickname << endl;
@@ -65,27 +65,27 @@ void changePokemonNickname(PokemonNode *pokemon)
     string nickname;
     if (!getline(cin, nickname))
     {
-        cout << "[INPUT] Could not read the nickname; no changes were made." << endl;
-        return;
+        reportError("Could not read the nickname; no changes were made.");
+        return false;
     }
 
     if (nickname.find_first_not_of(" \t") == string::npos)
     {
         cout << "Nickname change cancelled." << endl;
-        return;
+        return true;
     }
 
     const string oldNickname = pokemon->nickname;
     pokemon->nickname = nickname;
     cout << "[SUCCESS] Renamed " << oldNickname << " to " << pokemon->nickname << "." << endl;
+    return true;
 }
 
 void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
 {
     if (slot < 1 || slot > party.getCount())
     {
-        cout << "[ERROR] Invalid party slot position." << endl;
-        waitForContinue();
+        reportError("Invalid party slot position.");
         return;
     }
 
@@ -110,14 +110,12 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         {
             if (party.getCount() <= 1)
             {
-                cout << "[ERROR] Minimum 1 Pokémon required in party!" << endl;
-                waitForContinue();
+                reportError("Minimum 1 Pokémon required in party!");
                 continue;
             }
             if (pc.getCurrentBoxCount() >= BOX_CAPACITY)
             {
-                cout << "[ERROR] Active box is full!" << endl;
-                waitForContinue();
+                reportError("Active box is full!");
                 continue;
             }
 
@@ -133,8 +131,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         {
             if (party.getCount() < 2)
             {
-                cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
-                waitForContinue();
+                reportError("Need at least 2 Pokémon in party to swap!");
                 continue;
             }
             int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
@@ -148,12 +145,14 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             }
             else
             {
-                cout << "[ERROR] Invalid target position." << endl;
+                reportError("Invalid target position.");
+                continue;
             }
         }
         else if (action == 3)
         {
-            changePokemonNickname(getPokemonAtPosition(party, slot));
+            if (!changePokemonNickname(getPokemonAtPosition(party, slot)))
+                continue;
         }
         else if (action == 4)
         {
@@ -164,8 +163,7 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
         {
             if (party.getCount() <= 1)
             {
-                cout << "[ERROR] Cannot release your last Pokémon!" << endl;
-                waitForContinue();
+                reportError("Cannot release your last Pokémon!");
                 continue;
             }
 
@@ -183,13 +181,13 @@ void handlePartySubMenu(DoublyLinkedList &party, PCSystem &pc, int slot)
             }
             else
             {
-                cout << "[ERROR] Failed to release Pokémon." << endl;
+                reportError("Failed to release Pokémon.");
+                continue;
             }
         }
         else
         {
-            cout << "[ERROR] Invalid Choice." << endl;
-            waitForContinue();
+            reportError("Invalid Choice.");
             continue;
         }
 
@@ -233,8 +231,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
             {
                 if (party.getCount() < 2)
                 {
-                    cout << "[ERROR] Need at least 2 Pokémon in party to swap!" << endl;
-                    waitForContinue();
+                    reportError("Need at least 2 Pokémon in party to swap!");
                     continue;
                 }
                 int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
@@ -248,12 +245,14 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
                 }
                 else
                 {
-                    cout << "[ERROR] Invalid target position." << endl;
+                    reportError("Invalid target position.");
+                    continue;
                 }
             }
             else if (action == 2)
             {
-                changePokemonNickname(getPokemonAtPosition(party, slot));
+                if (!changePokemonNickname(getPokemonAtPosition(party, slot)))
+                    continue;
             }
             else if (action == 3)
             {
@@ -262,8 +261,7 @@ void managePartyOutsideBox(DoublyLinkedList &party, PCSystem &)
             }
             else
             {
-                cout << "[ERROR] Invalid Choice." << endl;
-                waitForContinue();
+                reportError("Invalid Choice.");
                 continue;
             }
 
@@ -284,8 +282,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
     DoublyLinkedList &boxList = pc.getCurrentList();
     if (slot < 1 || slot > boxList.getCount())
     {
-        cout << "[ERROR] Invalid box slot position." << endl;
-        waitForContinue();
+        reportError("Invalid box slot position.");
         return;
     }
 
@@ -315,8 +312,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         {
             if (party.getCount() >= MAX_PARTY_SIZE)
             {
-                cout << "[ERROR] Party is full!" << endl;
-                waitForContinue();
+                reportError("Party is full!");
                 continue;
             }
 
@@ -332,8 +328,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
         {
             if (boxList.getCount() < 2)
             {
-                cout << "[ERROR] Need at least 2 Pokémon in box to swap!" << endl;
-                waitForContinue();
+                reportError("Need at least 2 Pokémon in box to swap!");
                 continue;
             }
             int targetPos = readMenuChoice("\nSwap slot " + to_string(slot) + " with slot # (0 to cancel): ",
@@ -347,7 +342,8 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             }
             else
             {
-                cout << "[ERROR] Invalid target position." << endl;
+                reportError("Invalid target position.");
+                continue;
             }
         }
         else if (action == 3)
@@ -356,8 +352,7 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             int srcBox = pc.getCurrentBoxNumber();
             if (targetBox == srcBox)
             {
-                cout << "[ERROR] That is already the active box." << endl;
-                waitForContinue();
+                reportError("That is already the active box.");
                 continue;
             }
 
@@ -368,12 +363,14 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             }
             else
             {
-                cout << "[ERROR] Transfer failed (check box number or target capacity)." << endl;
+                reportError("Transfer failed (check box number or target capacity).");
+                continue;
             }
         }
         else if (action == 4)
         {
-            changePokemonNickname(getPokemonAtPosition(boxList, slot));
+            if (!changePokemonNickname(getPokemonAtPosition(boxList, slot)))
+                continue;
         }
         else if (action == 5)
         {
@@ -396,13 +393,13 @@ void handleBoxSubMenu(PCSystem &pc, DoublyLinkedList &party, int slot)
             }
             else
             {
-                cout << "[ERROR] Failed to release Pokémon." << endl;
+                reportError("Failed to release Pokémon.");
+                continue;
             }
         }
         else
         {
-            cout << "[ERROR] Invalid Choice." << endl;
-            waitForContinue();
+            reportError("Invalid Choice.");
             continue;
         }
 
@@ -491,8 +488,7 @@ void handleSortMenu(PCSystem &pc, DoublyLinkedList &party)
     DoublyLinkedList &list = (target == 1) ? pc.getCurrentList() : party;
     if (list.getCount() < 2)
     {
-        cout << "[ERROR] Need at least 2 Pokémon to sort." << endl;
-        waitForContinue();
+        reportError("Need at least 2 Pokémon to sort.");
         return;
     }
 
@@ -816,8 +812,8 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                 if (sub == 1)
                 {
                     int boxNum = readMenuChoice("\nEnter Box (1-30): ", MAX_BOXES, false);
-                    pc.switchBox(boxNum);
-                    waitForContinue();
+                    if (pc.switchBox(boxNum))
+                        waitForContinue();
                 }
                 else if (sub == 2)
                 {
@@ -828,7 +824,7 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
                         if (!getline(cin, name))
                             return;
                         if (name.empty())
-                            cout << "[ERROR] Box name cannot be empty." << endl;
+                            reportError("Box name cannot be empty.");
                     } while (name.empty());
                     pc.renameCurrentBox(name);
                     waitForContinue();
@@ -908,14 +904,12 @@ void viewPCMenu(PCSystem &pc, DoublyLinkedList &party)
             }
             else if (choice != 0)
             {
-                cout << "[ERROR] Invalid Choice." << endl;
-                waitForContinue();
+                reportError("Invalid Choice.");
             }
         }
         else
         {
-            cout << "[ERROR] Please enter a number." << endl;
-            waitForContinue();
+            reportError("Please enter a number.");
         }
     }
 }

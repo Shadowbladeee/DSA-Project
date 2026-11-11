@@ -35,15 +35,14 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
         }
         else
         {
-            waitForContinue();
+            // saveGame reports the error and waits for acknowledgment.
         }
     }
     else if (choice == 2)
     {
         if (!saveFileExists(SAVE_FILE))
         {
-            cout << "[ERROR] No save file found." << endl;
-            waitForContinue();
+            reportError("No save file found.");
             return;
         }
         SaveFileInfo info;
@@ -83,7 +82,7 @@ void handleSaveMenu(PCSystem &pc, DoublyLinkedList &party,
         }
         else
         {
-            waitForContinue();
+            // loadGame reports the error and waits for acknowledgment.
         }
     }
 }

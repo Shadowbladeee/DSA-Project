@@ -56,8 +56,15 @@ namespace
     set<int> *encounteredSpecies = nullptr;
     unordered_map<int, unordered_set<string>> usedEncounterModifiers;
 
-    bool readMenuChoice(const string &prompt, int minChoice, int maxChoice,
-                        int &choice);
+    enum class ChoiceReadResult
+    {
+        Valid,
+        Invalid,
+        InputClosed
+    };
+
+    ChoiceReadResult readMenuChoice(const string &prompt, int minChoice,
+                                    int maxChoice, int &choice);
 
     struct EncounterModifiers
     {
@@ -124,34 +131,40 @@ namespace
                 habitatsByNormalizedName.emplace(normalized, species->habitat);
         }
 
-        clearScreen();
-        printMenuHeader("SELECT EXPEDITION HABITAT");
-        cout << "Choose where to explore. Pokémon without a listed habitat can appear anywhere.\n";
-        cout << "1. Anywhere (all habitats)\n";
-        int option = 2;
-        for (const auto &habitat : habitatsByNormalizedName)
-            cout << option++ << ". " << formatHabitat(habitat.second) << "\n";
-        printMenuSeparator();
-        cout << "0. Cancel\n";
+        while (true)
+        {
+            clearScreen();
+            printMenuHeader("SELECT EXPEDITION HABITAT");
+            cout << "Choose where to explore. Pokémon without a listed habitat can appear anywhere.\n";
+            cout << "1. Anywhere (all habitats)\n";
+            int option = 2;
+            for (const auto &habitat : habitatsByNormalizedName)
+                cout << option++ << ". " << formatHabitat(habitat.second) << "\n";
+            printMenuSeparator();
+            cout << "0. Cancel\n";
 
-        int choice = 0;
-        if (!readMenuChoice(
+            int choice = 0;
+            const ChoiceReadResult result = readMenuChoice(
                 "\nSelect habitat: ", 0,
                 static_cast<int>(habitatsByNormalizedName.size()) + 1,
-                choice))
-            return false;
-        if (choice == 0)
-            return false;
-        if (choice == 1)
-        {
-            selectedHabitat.clear();
+                choice);
+            if (result == ChoiceReadResult::InputClosed)
+                return false;
+            if (result == ChoiceReadResult::Invalid)
+                continue;
+            if (choice == 0)
+                return false;
+            if (choice == 1)
+            {
+                selectedHabitat.clear();
+                return true;
+            }
+
+            auto habitat = habitatsByNormalizedName.begin();
+            advance(habitat, choice - 2);
+            selectedHabitat = habitat->second;
             return true;
         }
-
-        auto habitat = habitatsByNormalizedName.begin();
-        advance(habitat, choice - 2);
-        selectedHabitat = habitat->second;
-        return true;
     }
 
     // --- Math & Probability Helpers ---
@@ -259,24 +272,21 @@ namespace
         return {getEncounterLevel(pokemon), selected.first, selected.second};
     }
 
-    bool readMenuChoice(const string &prompt, int minChoice, int maxChoice, int &choice)
+    ChoiceReadResult readMenuChoice(const string &prompt, int minChoice,
+                                    int maxChoice, int &choice)
     {
         string line;
-        while (true)
-        {
-            cout << "\n" << prompt;
-            if (!getline(cin, line))
-                return false;
+        cout << "\n" << prompt;
+        if (!getline(cin, line))
+            return ChoiceReadResult::InputClosed;
 
-            istringstream input(line);
-            if (input >> choice && (input >> ws).eof() &&
-                choice >= minChoice && choice <= maxChoice)
-            {
-                return true;
-            }
+        istringstream input(line);
+        if (input >> choice && (input >> ws).eof() &&
+            choice >= minChoice && choice <= maxChoice)
+            return ChoiceReadResult::Valid;
 
-            cout << "[ERROR] Invalid Choice.\n";
-        }
+        reportError("Invalid Choice.");
+        return ChoiceReadResult::Invalid;
     }
 
     void printInventoryStatus()
@@ -285,6 +295,19 @@ namespace
              << playerInv.maxBalls << " | Rocks " << playerInv.rocks << "/"
              << playerInv.maxRocks << " | Bait " << playerInv.bait << "/"
              << playerInv.maxBait << "\n";
+    }
+
+    void showExpeditionStatus()
+    {
+        clearScreen();
+        printMenuHeader("SAFARI EXPEDITION");
+        cout << "Habitat: "
+             << (expeditionHabitat.empty() ? "Anywhere"
+                                           : formatHabitat(expeditionHabitat))
+             << "\n";
+        printInventoryStatus();
+        cout << "Progress: " << stats.encountered << " encountered | "
+             << stats.caught << " caught\n";
     }
 
     // --- Systems Implementation ---
@@ -376,7 +399,7 @@ namespace
     {
         if (speciesDB == nullptr || speciesDB->empty())
         {
-            cout << "[ERROR] The Pokémon database is empty; cannot generate an encounter.\n";
+            reportError("The Pokémon database is empty; cannot generate an encounter.");
             return false;
         }
 
@@ -395,7 +418,7 @@ namespace
 
         if (eligibleSpecies.empty())
         {
-            cout << "[ERROR] No Pokémon are available for this expedition habitat.\n";
+            reportError("No Pokémon are available for this expedition habitat.");
             return false;
         }
 
@@ -460,14 +483,19 @@ namespace
         }
 
         delete pokemon;
-        cout << "[ERROR] Your party and all PC boxes are full; "
-             << species->name << " could not be stored and was released.\n";
+        reportError("Your party and all PC boxes are full; " +
+                    species->name + " could not be stored and was released.");
     }
 
-    void showWildPokemon(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
+    void showWildPokemon(const SpeciesData *pokemon, const EncounterModifiers &modifiers,
+                         bool isShiny, bool playCry)
     {
         clearScreen();
-        playPokemonCry(pokemon->pokedexID);
+        if (playCry)
+        {
+            playPokemonCry(pokemon->pokedexID);
+            timeDelay(1000);
+        }
 
         const string formID = to_string(pokemon->internalID);
         const string pokedexID = to_string(pokemon->pokedexID);
@@ -492,22 +520,23 @@ namespace
         cout << "  Level: " << modifiers.level << " | Nature: " << modifiers.nature
              << " | Ability: " << (modifiers.ability.empty() ? "None" : formatAbilities(modifiers.ability)) << "\n";
         cout << "------------------------------------\n";
-        timeDelay(1000);
     }
 
     void handleEncounter(const SpeciesData *pokemon, const EncounterModifiers &modifiers, bool isShiny)
     {
         stats.encountered++;
         encounteredSpecies->insert(pokemon->internalID);
-        showWildPokemon(pokemon, modifiers, isShiny);
 
         double captureMod = 0.0;
         double fleeMod = 0.0;
         bool active = true;
+        bool cryPlayed = false;
 
-        printMenuHeader("ENCOUNTER");
         while (active)
         {
+            showWildPokemon(pokemon, modifiers, isShiny, !cryPlayed);
+            cryPlayed = true;
+            printMenuHeader("ENCOUNTER");
             printInventoryStatus();
             cout << "1. Throw Safari Ball\n";
             cout << "2. Throw Rock (+20% Catch, +15% Flee)\n";
@@ -516,19 +545,22 @@ namespace
             printMenuSeparator();
 
             int action;
-            if (!readMenuChoice("Choice: ", 1, 4, action))
+            const ChoiceReadResult result = readMenuChoice("Choice: ", 1, 4, action);
+            if (result == ChoiceReadResult::InputClosed)
             {
                 cout << "\n[INPUT] Input closed. Ending the expedition.\n";
                 expeditionOver = true;
                 return;
             }
+            if (result == ChoiceReadResult::Invalid)
+                continue;
             bool turnCompleted = false;
 
             if (action == 1)
             { // SAFARI BALL
                 if (playerInv.balls <= 0)
                 {
-                    cout << "You have no Safari Balls left!\n";
+                    reportError("You have no Safari Balls left.");
                     continue;
                 }
                 playerInv.balls--;
@@ -556,7 +588,7 @@ namespace
             { // ROCK
                 if (playerInv.rocks <= 0)
                 {
-                    cout << "\nYou have no Rocks left!\n";
+                    reportError("You have no Rocks left.");
                     continue;
                 }
                 playerInv.rocks--;
@@ -569,7 +601,7 @@ namespace
             { // BAIT
                 if (playerInv.bait <= 0)
                 {
-                    cout << "\nYou have no Bait left!\n";
+                    reportError("You have no Bait left.");
                     continue;
                 }
                 playerInv.bait--;
@@ -606,6 +638,10 @@ namespace
                 cout << "\n[!] You ran out of Safari Balls! The encounter ends.\n";
                 active = false;
             }
+            else if (active && turnCompleted)
+            {
+                waitForContinue();
+            }
         }
 
         captureMod = 0.0;
@@ -632,7 +668,7 @@ namespace
             if (isLastChance)
             {
                 stats.encountered++;
-                showWildPokemon(wild, modifiers, isShiny);
+                showWildPokemon(wild, modifiers, isShiny, true);
                 cout << "\nYou have no Safari Balls to catch it.\n";
                 cout << "The expedition ends because you cannot catch it without Safari Balls.\n";
             }
@@ -670,6 +706,8 @@ namespace
     {
         if (playerInv.balls > 0 || expeditionOver)
             return;
+
+        showExpeditionStatus();
 
         if (lastChanceUsed)
         {
@@ -709,6 +747,7 @@ namespace
             return;
         }
 
+        showExpeditionStatus();
         performExploration(false);
 
         // Reaching zero triggers the expedition's one final exploration attempt.
@@ -791,33 +830,27 @@ namespace
     {
         while (!expeditionOver)
         {
-            clearScreen();
-            printMenuHeader("SAFARI EXPEDITION");
-            cout << "Habitat: "
-                 << (expeditionHabitat.empty() ? "Anywhere"
-                                               : formatHabitat(expeditionHabitat))
-                 << "\n";
-            printInventoryStatus();
-            cout << "Progress: " << stats.encountered << " encountered | "
-                 << stats.caught << " caught\n";
+            showExpeditionStatus();
             cout << "1. Explore\n";
             cout << "2. View Inventory\n";
             cout << "3. End Expedition\n";
             printMenuSeparator();
 
             int choice;
-            if (!readMenuChoice("Choice: ", 1, 3, choice))
+            const ChoiceReadResult result = readMenuChoice("Choice: ", 1, 3, choice);
+            if (result == ChoiceReadResult::InputClosed)
             {
                 cout << "\n[INPUT] Input closed. Ending the expedition.\n";
                 expeditionOver = true;
                 break;
             }
+            if (result == ChoiceReadResult::Invalid)
+                continue;
 
             if (choice == 1)
             {
                 explore();
-                if (!expeditionOver)
-                    waitForContinue();
+                waitForContinue();
             }
             else if (choice == 2)
             {
@@ -846,7 +879,7 @@ void startExpedition(const vector<SpeciesData *> &speciesDatabase,
 {
     if (speciesDatabase.empty())
     {
-        cout << "[ERROR] The Pokémon database is empty; cannot start an expedition.\n";
+        reportError("The Pokémon database is empty; cannot start an expedition.");
         return;
     }
 

@@ -99,7 +99,7 @@ void renderAutoCenteredSprite(const string &filepath, int targetBoxWidth, int ta
 
     if (!img)
     {
-        cout << "\033[31m[ERROR] Could not load image: " << filepath << "\033[0m\n";
+        reportError("Could not load image: " + filepath);
         return;
     }
 
@@ -206,7 +206,7 @@ void printSummary(const PokemonNode *pokemon, const SpeciesData *species,
     clearScreen();
     if (!species)
     {
-        cout << "[ERROR] Invalid species data.\n";
+        reportError("Invalid species data.");
         return;
     }
 
@@ -313,7 +313,7 @@ void printPokemonSummary(const PokemonNode *pokemon, bool playCry, bool showSpri
     if (pokemon == nullptr)
     {
         clearScreen();
-        cout << "[ERROR] Invalid Pokémon data.\n";
+        reportError("Invalid Pokémon data.");
         return;
     }
 
@@ -333,24 +333,30 @@ void browsePokemonSummaries(const DoublyLinkedList &list, int position)
 
         if (pokemon == nullptr)
         {
-            cout << "[ERROR] Could not find that Pokémon.\n";
+            reportError("Could not find that Pokémon.");
             return;
         }
 
         printSummary(pokemon, pokemon->species, true, true, false);
-        const int navigation = readSlotOrNav(
-            "N = next Pokémon | P = previous Pokémon | 0 = back: ",
-            0);
-        if (navigation == 0)
-            return;
-        if (navigation == NAV_NEXT && position < list.getCount())
-            ++position;
-        else if (navigation == NAV_PREV && position > 1)
-            --position;
-        else
+        while (true)
         {
-            cout << "[ERROR] No Pokémon in that direction.\n";
-            waitForContinue();
+            const int navigation = readSlotOrNav(
+                "N = next Pokémon | P = previous Pokémon | 0 = back: ",
+                0);
+            if (navigation == 0)
+                return;
+            if (navigation == NAV_NEXT && position < list.getCount())
+            {
+                ++position;
+                break;
+            }
+            if (navigation == NAV_PREV && position > 1)
+            {
+                --position;
+                break;
+            }
+
+            reportError("No Pokémon in that direction.");
         }
     }
 }
@@ -367,7 +373,7 @@ void printSpeciesSummary(const SpeciesData *species, bool encountered, bool caug
     clearScreen();
     if (species == nullptr)
     {
-        cout << "[ERROR] Invalid species data.\n";
+        reportError("Invalid species data.");
         return;
     }
 

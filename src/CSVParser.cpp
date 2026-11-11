@@ -12,7 +12,6 @@ bool checkCSVFile(const string &filename)
     ifstream file(filename);
     if (!file.is_open())
     {
-        cerr << "[ERROR] Could not open file: " << filename << endl;
         return false;
     }
     file.close();
@@ -128,7 +127,6 @@ vector<SpeciesData *> loadSpeciesDatabase(const string &filename)
 
     if (!file.is_open())
     {
-        cerr << "[ERROR] Could not open " << filename << endl;
         return database;
     }
 

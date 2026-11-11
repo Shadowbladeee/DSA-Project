@@ -1,5 +1,6 @@
 #include "../include/SaveSystem.h"
 #include "../include/GameSettings.h"
+#include "../include/ConsoleUtils.h"
 #include <ctime>
 #include <cstdio>
 #include <fstream>
@@ -245,7 +246,7 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     const string savedAt = currentTimestamp();
     if (savedAt.empty())
     {
-        cout << "[ERROR] Could not determine the current date and time." << endl;
+        reportError("Could not determine the current date and time.");
         return false;
     }
 
@@ -253,7 +254,7 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         ofstream out(tmpName);
         if (!out.is_open())
         {
-            cout << "[ERROR] Could not write " << tmpName << endl;
+            reportError("Could not write " + tmpName + ".");
             return false;
         }
 
@@ -280,13 +281,13 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
         out.flush();
         if (!out)
         {
-            cout << "[ERROR] Failed while writing the save file." << endl;
+            reportError("Failed while writing the save file.");
             return false;
         }
         out.close();
         if (!out)
         {
-            cout << "[ERROR] Failed while closing the temporary save file." << endl;
+            reportError("Failed while closing the temporary save file.");
             return false;
         }
     } // file is closed here
@@ -297,13 +298,13 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     {
         if (fileExists(backupName) && std::remove(backupName.c_str()) != 0)
         {
-            cout << "[ERROR] Could not replace the previous backup " << backupName << "." << endl;
+            reportError("Could not replace the previous backup " + backupName + ".");
             std::remove(tmpName.c_str());
             return false;
         }
         if (std::rename(filename.c_str(), backupName.c_str()) != 0)
         {
-            cout << "[ERROR] Could not back up the existing save; it was left unchanged." << endl;
+            reportError("Could not back up the existing save; it was left unchanged.");
             std::remove(tmpName.c_str());
             return false;
         }
@@ -311,11 +312,11 @@ bool saveGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
 
     if (std::rename(tmpName.c_str(), filename.c_str()) != 0)
     {
-        cout << "[ERROR] Could not finalize the save file." << endl;
+        reportError("Could not finalize the save file.");
         if (hadPreviousSave && std::rename(backupName.c_str(), filename.c_str()) != 0)
         {
-            cout << "[ERROR] The previous save remains at " << backupName
-                 << " and could not be restored automatically." << endl;
+            reportError("The previous save remains at " + backupName +
+                        " and could not be restored automatically.");
         }
         std::remove(tmpName.c_str());
         return false;
@@ -333,7 +334,7 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     ifstream in(filename);
     if (!in.is_open())
     {
-        cout << "[ERROR] No save file found (" << filename << ")." << endl;
+        reportError("No save file found (" + filename + ").");
         return false;
     }
 
@@ -354,8 +355,8 @@ bool loadGame(const string &filename, PCSystem &pc, DoublyLinkedList &party,
     string line;
     int lineNo = 0;
     auto fail = [&](const string &why) {
-        cout << "[ERROR] Save file is invalid (line " << lineNo << ": " << why
-             << "). Nothing was changed." << endl;
+        reportError("Save file is invalid (line " + to_string(lineNo) + ": " +
+                    why + "). Nothing was changed.");
         return false;
     };
 

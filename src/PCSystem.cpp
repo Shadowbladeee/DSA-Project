@@ -1,4 +1,5 @@
 #include "../include/PCSystem.h"
+#include "../include/ConsoleUtils.h"
 #include <iostream>
 #include <algorithm>
 #include <cctype>
@@ -18,7 +19,8 @@ bool PCSystem::switchBox(int boxNumber)
 {
     if (boxNumber < 1 || boxNumber > MAX_BOXES)
     {
-        cout << "[ERROR] Invalid box number! Choose between 1 and " << MAX_BOXES << "." << endl;
+        reportError("Invalid box number! Choose between 1 and " +
+                    to_string(MAX_BOXES) + ".");
         return false;
     }
     currentBoxIndex = boxNumber - 1;
@@ -30,7 +32,7 @@ bool PCSystem::renameCurrentBox(const string &newName)
 {
     if (newName.empty())
     {
-        cout << "[ERROR] Box name cannot be empty." << endl;
+        reportError("Box name cannot be empty.");
         return false;
     }
     cout << "[SUCCESS] Renamed [" << boxes[currentBoxIndex].name << "] to ["

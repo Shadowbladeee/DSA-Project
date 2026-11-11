@@ -112,7 +112,7 @@ int readMenuChoice(const string &prompt, int maxOption, bool allowZero)
         if ((allowZero && choice == 0) || (choice >= 1 && choice <= maxOption))
             return choice;
 
-        cout << "[ERROR] Invalid Choice." << endl;
+        reportError("Invalid Choice.");
     }
 }
 
@@ -128,9 +128,9 @@ int readNonNegativeNumber(const string &prompt)
             return number;
 
         if (number == -1)
-            cout << "[ERROR] Please enter a number." << endl;
+            reportError("Please enter a number.");
         else
-            cout << "[ERROR] The number cannot be negative." << endl;
+            reportError("The number cannot be negative.");
     }
 }
 
@@ -154,7 +154,7 @@ bool askYesNo(const string &prompt)
         if (normalized == "n" || normalized == "no")
             return false;
 
-        cout << "[ERROR] Please type y or n." << endl;
+        reportError("Please type y or n.");
     }
 }
 
@@ -179,7 +179,10 @@ int chooseSecondType(const string &firstType)
         cout << right << endl;
         cout << "(Any = any second type, Mono = single-type only)" << endl;
         if (!error.empty())
-            cout << "[ERROR] " << error << endl;
+        {
+            reportError(error);
+            error.clear();
+        }
         printMenuSeparator();
         cout << " 0. Cancel" << endl;
 
@@ -190,6 +193,8 @@ int chooseSecondType(const string &firstType)
             return pick;
 
         error = "Type 2 must differ from Type 1. Choose Mono for a single-type Pokémon.";
+        reportError(error);
+        error.clear();
     }
 }
 
@@ -220,6 +225,6 @@ int readSlotOrNav(const string &prompt, int maxSlot)
         if (in >> v && (in >> ws).eof() && v >= 0 && v <= maxSlot)
             return v;
 
-        cout << "[ERROR] Invalid Choice." << endl;
+        reportError("Invalid Choice.");
     }
 }
